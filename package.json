@@ -1,0 +1,10 @@
+{
+  "name": "scrape-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@x402/core": "latest",
+    "@x402/evm": "latest",
+    "zod": "^3.22.4"
+  }
+}
