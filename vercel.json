@@ -1,18 +1,5 @@
 {
-  "version": 2,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/llms.txt", "destination": "/public/llms.txt" },
-    { "source": "/", "destination": "/public/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-PAYMENT, X-PAYMENT-RESPONSE" }
-      ]
-    }
+    { "source": "/api/scrape/x402", "destination": "/api/scrape/x402.js" }
   ]
 }
