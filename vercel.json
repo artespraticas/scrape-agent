@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/scrape/x402", "destination": "/api/scrape/x402.js" }
+    { "source": "/api", "destination": "/api/index" }
   ]
 }
