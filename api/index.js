@@ -1,17 +1,21 @@
-export default function handler(req, res) {
-  res.status(200).json({
-    service: "ScrapeAgent API",
+export default function handler(req) {
+  return new Response(JSON.stringify({
+    name: "Scrape Agent",
+    description: "Pay-per-use web scraping API using x402",
     version: "1.0.0",
-    network: "base",
-    endpoints: {
-      scrape: {
+    endpoints: [
+      {
         path: "/api/scrape/x402",
-        method: "GET",
-        price: "$0.01 USDC per scrape",
+        method: "POST",
         protocol: "x402",
-        params: { url: "URL to scrape" }
+        price: "$0.01 USDC",
+        network: "Base",
+        description: "Scrape any URL and return clean text, links, or HTML"
       }
-    },
-    llms_txt: "https://scrape-agent.vercel.app/llms.txt"
+    ],
+    discovery: "https://scrape-agent.vercel.app/llms.txt"
+  }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
   });
 }
