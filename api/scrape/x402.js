@@ -71,33 +71,3 @@ export default async function handler(req) {
 export const config = {
   runtime: "edge",
 };
-```
-
----
-
-## Step 6 — `public/llms.txt`
-
-Create folder `public`, then file `public/llms.txt` with:
-```
-# Scrape Agent — x402 Pay-Per-Use Web Scraper
-
-## Service
-- Name: Scrape Agent
-- URL: https://scrape-agent.vercel.app
-- Protocol: x402
-- Price: $0.01 USDC per request
-- Network: Base mainnet
-
-## Endpoint
-POST https://scrape-agent.vercel.app/api/scrape/x402
-
-## Payment
-- Asset: USDC on Base
-- Amount: 0.01 USD (10000 units)
-- PayTo: 0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1
-
-## Usage
-Send a POST request with JSON body:
-{ "url": "https://example.com", "extract": "text" }
-
-Extract options: text, html, links, meta, full
