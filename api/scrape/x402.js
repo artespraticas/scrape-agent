@@ -44,7 +44,32 @@ export default async function handler(req) {
         payTo: WALLET,
         maxTimeoutSeconds: 300,
         asset: USDC,
-        outputSchema: null,
+        inputSchema: {
+          type: "object",
+          properties: {
+            url: {
+              type: "string",
+              description: "The URL to scrape"
+            },
+            extract: {
+              type: "string",
+              enum: ["text", "html", "links", "meta", "full"],
+              description: "What to extract — defaults to text"
+            }
+          },
+          required: ["url"]
+        },
+        outputSchema: {
+          type: "object",
+          properties: {
+            url: { type: "string" },
+            status: { type: "string" },
+            title: { type: "string" },
+            content: { type: "string" },
+            wordCount: { type: "number" },
+            elapsed: { type: "number" }
+          }
+        }
       }],
     }), {
       status: 402,
