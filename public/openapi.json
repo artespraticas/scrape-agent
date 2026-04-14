@@ -1,0 +1,40 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Scrape Agent",
+    "version": "1.0.0",
+    "x-guidance": "Send POST to /api/scrape/x402 with JSON body {url: string, extract?: text|html|links|meta|full}. Requires $0.01 USDC payment on Base via x402 v2 protocol. On 402 response, pay using X-PAYMENT header and retry."
+  },
+  "paths": {
+    "/api/scrape/x402": {
+      "post": {
+        "summary": "Scrape a URL",
+        "description": "Scrapes any public URL and returns extracted content",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri", "description": "The URL to scrape" },
+                  "extract": { "type": "string", "enum": ["text", "html", "links", "meta", "full"], "default": "text" },
+                  "timeout": { "type": "number", "minimum": 1000, "maximum": 15000, "default": 8000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Scrape successful" },
+          "402": { "description": "Payment Required - send 0.01 USDC on Base via x402" }
+        },
+        "x-payment-info": {
+          "protocols": ["x402"],
+          "price": { "mode": "fixed", "currency": "USD", "amount": "0.01" }
+        }
+      }
+    }
+  }
+}
