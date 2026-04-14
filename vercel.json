@@ -2,5 +2,14 @@
   "rewrites": [
     { "source": "/api", "destination": "/api/index" },
     { "source": "/openapi.json", "destination": "/api/openapi.json" }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/x402",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
   ]
 }
