@@ -1,7 +1,7 @@
 import { scrapeUrl, ScrapeSchema } from "../../lib/scraper.js";
 
 const WALLET = "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1";
-const NETWORK = "base";
+const NETWORK = "eip155:8453";
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 const INPUT_SCHEMA = {
@@ -44,9 +44,34 @@ const OUTPUT_SCHEMA = {
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-PAYMENT, X-PAYMENT-RESPONSE",
   };
+}
+
+function paymentRequired() {
+  return new Response(JSON.stringify({
+    x402Version: 2,
+    error: "Payment required",
+    accepts: [{
+      scheme: "exact",
+      network: NETWORK,
+      maxAmountRequired: "10000",
+      resource: "/api/scrape/x402",
+      description: "Pay-per-use web scraping — $0.01 per request",
+      mimeType: "application/json",
+      payTo: WALLET,
+      maxTimeoutSeconds: 300,
+      asset: USDC,
+      outputSchema: {
+        input: INPUT_SCHEMA,
+        output: OUTPUT_SCHEMA
+      }
+    }],
+  }), {
+    status: 402,
+    headers: { "Content-Type": "application/json", ...cors() },
+  });
 }
 
 function json(data, status = 200) {
@@ -61,52 +86,17 @@ export default async function handler(req) {
     return new Response(null, { status: 204, headers: cors() });
   }
 
+  if (req.method === "GET") {
+    return paymentRequired();
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({
-      x402Version: 1,
-      error: "Payment required",
-      accepts: [{
-        scheme: "exact",
-        network: NETWORK,
-        maxAmountRequired: "10000",
-        resource: "/api/scrape/x402",
-        description: "Pay-per-use web scraping — $0.01 per request",
-        mimeType: "application/json",
-        payTo: WALLET,
-        maxTimeoutSeconds: 300,
-        asset: USDC,
-        inputSchema: INPUT_SCHEMA,
-        outputSchema: OUTPUT_SCHEMA,
-      }],
-    }), {
-      status: 402,
-      headers: { "Content-Type": "application/json", ...cors() },
-    });
+    return json({ error: "Use POST with a JSON body containing a url field" }, 405);
   }
 
   const paymentHeader = req.headers.get("X-PAYMENT");
-
   if (!paymentHeader) {
-    return new Response(JSON.stringify({
-      x402Version: 1,
-      error: "Payment required",
-      accepts: [{
-        scheme: "exact",
-        network: NETWORK,
-        maxAmountRequired: "10000",
-        resource: "/api/scrape/x402",
-        description: "Pay-per-use web scraping — $0.01 per request",
-        mimeType: "application/json",
-        payTo: WALLET,
-        maxTimeoutSeconds: 300,
-        asset: USDC,
-        inputSchema: INPUT_SCHEMA,
-        outputSchema: OUTPUT_SCHEMA,
-      }],
-    }), {
-      status: 402,
-      headers: { "Content-Type": "application/json", ...cors() },
-    });
+    return paymentRequired();
   }
 
   let body;
