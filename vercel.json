@@ -1,7 +1,6 @@
 {
   "rewrites": [
     { "source": "/api", "destination": "/api/index" },
-    { "source": "/openapi.json", "destination": "/api/openapi.json" },
-    { "source": "/.well-known/:path*", "destination": "/api/.well-known/:path*" }
+    { "source": "/openapi.json", "destination": "/api/openapi.json" }
   ]
 }
