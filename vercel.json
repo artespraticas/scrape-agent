@@ -1,11 +1,17 @@
 {
   "rewrites": [
-    { "source": "/api", "destination": "/api/index" },
-    { "source": "/openapi.json", "destination": "/api/openapi.json" }
+    { "source": "/api", "destination": "/api/index" }
   ],
   "headers": [
     {
       "source": "/.well-known/x402",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    },
+    {
+      "source": "/openapi.json",
       "headers": [
         { "key": "Content-Type", "value": "application/json" },
         { "key": "Access-Control-Allow-Origin", "value": "*" }
