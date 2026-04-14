@@ -4,7 +4,7 @@ export default function handler(req) {
     info: {
       title: "Scrape Agent",
       version: "1.0.0",
-      "x-guidance": "This API scrapes any public URL and returns clean text, links, or HTML. Send a POST request to /api/scrape/x402 with a JSON body containing a 'url' field. Payment of $0.01 USDC on Base is required per request via x402 protocol. No API key needed — just pay and retry with the X-PAYMENT header."
+      "x-guidance": "This API scrapes any public URL and returns clean text, links, or HTML. Send a POST request to /api/scrape/x402 with a JSON body containing a url field. Payment of $0.01 USDC on Base is required per request via x402 protocol. No API key needed - just pay and retry with the X-PAYMENT header."
     },
     paths: {
       "/api/scrape/x402": {
@@ -21,6 +21,7 @@ export default function handler(req) {
                   properties: {
                     url: {
                       type: "string",
+                      format: "uri",
                       description: "The URL to scrape"
                     },
                     extract: {
@@ -31,8 +32,10 @@ export default function handler(req) {
                     },
                     timeout: {
                       type: "number",
+                      minimum: 1000,
+                      maximum: 15000,
                       default: 8000,
-                      description: "Timeout in milliseconds (1000-15000)"
+                      description: "Timeout in milliseconds"
                     }
                   }
                 }
@@ -41,10 +44,25 @@ export default function handler(req) {
           },
           responses: {
             "200": {
-              description: "Scrape successful"
+              description: "Scrape successful",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      url: { type: "string" },
+                      status: { type: "string" },
+                      title: { type: "string" },
+                      content: { type: "string" },
+                      wordCount: { type: "number" },
+                      elapsed: { type: "number" }
+                    }
+                  }
+                }
+              }
             },
             "402": {
-              description: "Payment Required — send 0.01 USDC on Base via x402"
+              description: "Payment Required - send 0.01 USDC on Base via x402"
             }
           },
           "x-payment-info": {
