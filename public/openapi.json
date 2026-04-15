@@ -5,11 +5,25 @@
     "version": "1.0.0",
     "x-guidance": "Send POST to /api/scrape/x402 with JSON body containing url (string, required) and optional extract (text|html|links|meta|full). Requires $0.01 USDC payment on Base via x402 v2. On 402 response, pay using X-PAYMENT header and retry."
   },
+  "components": {
+    "securitySchemes": {
+      "x402": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-PAYMENT",
+        "description": "x402 payment header — send 0.01 USDC on Base and retry with payment proof"
+      }
+    }
+  },
   "paths": {
     "/api/scrape/x402": {
       "post": {
         "summary": "Scrape a URL",
         "description": "Scrapes any public URL and returns clean text, links or HTML. Costs $0.01 USDC per request via x402 on Base.",
+        "security": [{ "x402": [] }],
+        "x-payment-required": true,
+        "x-price": "0.01",
+        "x-currency": "USD",
         "requestBody": {
           "required": true,
           "content": {
