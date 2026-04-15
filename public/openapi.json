@@ -9,7 +9,7 @@
     "/api/scrape/x402": {
       "post": {
         "summary": "Scrape a URL",
-        "description": "Scrapes any public URL and returns extracted content. Costs $0.01 USDC per request via x402.",
+        "description": "Scrapes any public URL and returns clean text, links or HTML. Costs $0.01 USDC per request via x402 on Base.",
         "requestBody": {
           "required": true,
           "content": {
@@ -61,31 +61,8 @@
             }
           },
           "402": {
-            "description": "Payment Required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "x402Version": { "type": "number" },
-                    "error": { "type": "string" },
-                    "accepts": { "type": "array" }
-                  }
-                }
-              }
-            }
+            "description": "Payment Required - send 0.01 USDC on Base via x402"
           }
-        },
-        "x-payment-info": {
-          "protocols": ["x402"],
-          "price": {
-            "mode": "fixed",
-            "currency": "USD",
-            "amount": "0.01"
-          },
-          "network": "eip155:8453",
-          "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-          "payTo": "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1"
         }
       }
     }
