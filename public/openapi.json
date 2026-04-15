@@ -7,11 +7,15 @@
   },
   "components": {
     "securitySchemes": {
-      "x402": {
+      "x402Payment": {
         "type": "apiKey",
         "in": "header",
         "name": "X-PAYMENT",
-        "description": "x402 payment header — send 0.01 USDC on Base and retry with payment proof"
+        "x-auth-mode": "paid",
+        "x-protocols": ["x402"],
+        "x-price": "0.01",
+        "x-currency": "USD",
+        "description": "x402 micropayment — send 0.01 USDC on Base (eip155:8453) and retry with payment proof in X-PAYMENT header"
       }
     }
   },
@@ -20,8 +24,9 @@
       "post": {
         "summary": "Scrape a URL",
         "description": "Scrapes any public URL and returns clean text, links or HTML. Costs $0.01 USDC per request via x402 on Base.",
-        "security": [{ "x402": [] }],
-        "x-payment-required": true,
+        "security": [{ "x402Payment": [] }],
+        "x-auth-mode": "paid",
+        "x-protocols": ["x402"],
         "x-price": "0.01",
         "x-currency": "USD",
         "requestBody": {
@@ -80,5 +85,3 @@
         }
       }
     }
-  }
-}
