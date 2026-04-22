@@ -7,7 +7,7 @@ const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const ACCEPTS = [{
   scheme: "exact",
   network: NETWORK,
-  maxAmountRequired: "10000",
+  maxAmountRequired: 10000,
   resource: "/api/scrape/x402",
   description: "Pay-per-use web scraping — $0.01 per request",
   mimeType: "application/json",
