@@ -44,7 +44,7 @@ function json(data, status = 200) {
 }
 
 function pay402() {
-  const encoded = btoa(JSON.stringify(PAYMENT_REQUIRED_BODY));
+  const encoded = Buffer.from(JSON.stringify(PAYMENT_REQUIRED_BODY)).toString("base64");
   return new Response(JSON.stringify(PAYMENT_REQUIRED_BODY), {
     status: 402,
     headers: {
