@@ -3,24 +3,23 @@
   "info": {
     "title": "Scrape Agent",
     "version": "1.0.0",
-    "x-guidance": "Send POST to /api/scrape/x402 with JSON body containing url (string, required) and optional extract (text|html|links|meta|full). Requires $0.01 USDC payment on Base via x402 v2. On 402 response, pay using X-PAYMENT header and retry."
-  },
-  "components": {
-    "securitySchemes": {
-      "x402Payment": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-PAYMENT",
-        "description": "x402 micropayment — send 0.01 USDC on Base"
-      }
-    }
+    "description": "Pay-per-use web scraping API built on x402. Extract clean text, links or HTML from any URL for $0.01 USDC on Base.",
+    "x-guidance": "Use POST /api/scrape/x402 to scrape any public URL. Send a JSON body with a 'url' field (required) and optional 'extract' field (text|html|links|meta|full). Payment of $0.01 USDC on Base is required via x402 protocol. No API key needed."
   },
   "paths": {
     "/api/scrape/x402": {
       "post": {
-        "summary": "Scrape a URL",
-        "description": "Scrapes any public URL and returns clean text, links or HTML. Costs $0.01 USDC per request via x402 on Base.",
-        "security": [{ "x402Payment": [] }],
+        "operationId": "scrapeUrl",
+        "summary": "Scrape a URL - Extract clean content from any public webpage",
+        "tags": ["Scraping"],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.010000"
+          },
+          "protocols": [{ "x402": {} }]
+        },
         "requestBody": {
           "required": true,
           "content": {
@@ -29,17 +28,53 @@
                 "type": "object",
                 "required": ["url"],
                 "properties": {
-                  "url": { "type": "string", "format": "uri", "description": "The URL to scrape" },
-                  "extract": { "type": "string", "enum": ["text", "html", "links", "meta", "full"], "default": "text" },
-                  "timeout": { "type": "number", "minimum": 1000, "maximum": 15000, "default": 8000 }
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "minLength": 1,
+                    "description": "The URL to scrape"
+                  },
+                  "extract": {
+                    "type": "string",
+                    "enum": ["text", "html", "links", "meta", "full"],
+                    "default": "text",
+                    "description": "What to extract from the page"
+                  },
+                  "timeout": {
+                    "type": "number",
+                    "minimum": 1000,
+                    "maximum": 15000,
+                    "default": 8000,
+                    "description": "Timeout in milliseconds"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Scrape successful" },
-          "402": { "description": "Payment Required" }
+          "200": {
+            "description": "Scrape successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["url", "status"],
+                  "properties": {
+                    "url": { "type": "string" },
+                    "status": { "type": "string" },
+                    "title": { "type": "string" },
+                    "content": { "type": "string" },
+                    "wordCount": { "type": "number" },
+                    "elapsed": { "type": "number" }
+                  }
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required - send 0.01 USDC on Base via x402"
+          }
         }
       }
     }
