@@ -28,6 +28,15 @@ const PAYMENT_REQUIRED_BODY = {
   accepts: ACCEPTS
 };
 
+function encodeBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -44,8 +53,9 @@ function json(data, status = 200) {
 }
 
 function pay402() {
-  const encoded = Buffer.from(JSON.stringify(PAYMENT_REQUIRED_BODY)).toString("base64");
-  return new Response(JSON.stringify(PAYMENT_REQUIRED_BODY), {
+  const jsonStr = JSON.stringify(PAYMENT_REQUIRED_BODY);
+  const encoded = encodeBase64(jsonStr);
+  return new Response(jsonStr, {
     status: 402,
     headers: {
       "Content-Type": "application/json",
@@ -83,4 +93,15 @@ export default async function handler(req) {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  const parsed =
+  const parsed = ScrapeSchema.safeParse(body);
+  if (!parsed.success) {
+    return json({ error: "Validation failed", issues: parsed.error.flatten() }, 422);
+  }
+
+  const result = await scrapeUrl(parsed.data);
+  return json({ protocol: "x402", version: 2, priceUSD: "0.01", ...result });
+}
+
+export const config = {
+  runtime: "edge",
+};
