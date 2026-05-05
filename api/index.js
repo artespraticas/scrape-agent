@@ -11,7 +11,7 @@ export default function handler(req) {
       network: "Base",
       description: "Scrape any URL, returns clean text, links or HTML"
     }],
-    discovery: "https://scrape-agent.vercel.app/llms.txt"
+    discovery: "https://scrapeagent.xyz/llms.txt"
   }), {
     status: 200,
     headers: {
