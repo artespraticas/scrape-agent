@@ -21,7 +21,7 @@ const PAYMENT_REQUIRED_BODY = {
   x402Version: 2,
   error: "Payment required",
   resource: {
-    url: "https://scrape-agent.vercel.app/api/scrape/x402",
+    url: "https://scrapeagent.xyz/api/scrape/x402",
     description: "Pay-per-use web scraping — $0.01 per request",
     mimeType: "application/json"
   },
