@@ -3,6 +3,7 @@ import { scrapeUrl, ScrapeSchema } from "../../lib/scraper.js";
 const WALLET = "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1";
 const NETWORK = "eip155:8453";
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const FACILITATOR = "https://x402.org/facilitator";
 
 const ACCEPTS = [{
   scheme: "exact",
@@ -65,6 +66,56 @@ function pay402() {
   });
 }
 
+async function verifyPayment(paymentHeader) {
+  try {
+    const response = await fetch(`${FACILITATOR}/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x402Version: 2,
+        payload: paymentHeader,
+        resource: {
+          url: "https://scrapeagent.xyz/api/scrape/x402",
+          description: "Pay-per-use web scraping — $0.01 per request",
+          mimeType: "application/json"
+        },
+        accepts: ACCEPTS
+      })
+    });
+
+    if (!response.ok) return { valid: false };
+    const data = await response.json();
+    return { valid: data.isValid === true, data };
+  } catch (err) {
+    return { valid: false, error: err.message };
+  }
+}
+
+async function settlePayment(paymentHeader) {
+  try {
+    const response = await fetch(`${FACILITATOR}/settle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x402Version: 2,
+        payload: paymentHeader,
+        resource: {
+          url: "https://scrapeagent.xyz/api/scrape/x402",
+          description: "Pay-per-use web scraping — $0.01 per request",
+          mimeType: "application/json"
+        },
+        accepts: ACCEPTS
+      })
+    });
+
+    if (!response.ok) return { success: false };
+    const data = await response.json();
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 export default async function handler(req) {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors() });
@@ -86,6 +137,24 @@ export default async function handler(req) {
     return pay402();
   }
 
+  // Verify payment with facilitator
+  const verification = await verifyPayment(paymentHeader);
+  if (!verification.valid) {
+    return json({
+      error: "Payment verification failed",
+      details: "Invalid or unrecognized payment proof"
+    }, 402);
+  }
+
+  // Settle payment with facilitator
+  const settlement = await settlePayment(paymentHeader);
+  if (!settlement.success) {
+    return json({
+      error: "Payment settlement failed",
+      details: "Could not settle payment on-chain"
+    }, 402);
+  }
+
   let body;
   try {
     body = await req.json();
@@ -99,7 +168,13 @@ export default async function handler(req) {
   }
 
   const result = await scrapeUrl(parsed.data);
-  return json({ protocol: "x402", version: 2, priceUSD: "0.01", ...result });
+  return json({
+    protocol: "x402",
+    version: 2,
+    priceUSD: "0.01",
+    settled: true,
+    ...result
+  });
 }
 
 export const config = {
