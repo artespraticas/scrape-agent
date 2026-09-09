@@ -53,8 +53,13 @@ function json(data, status = 200) {
   });
 }
 
-function pay402() {
-  const jsonStr = JSON.stringify(PAYMENT_REQUIRED_BODY);
+// Full 402 with accepts — used for both no-header and failed-payment cases
+function pay402(extraError = null) {
+  const body = {
+    ...PAYMENT_REQUIRED_BODY,
+    ...(extraError ? { error: extraError } : {})
+  };
+  const jsonStr = JSON.stringify(body);
   const encoded = encodeBase64(jsonStr);
   return new Response(jsonStr, {
     status: 402,
@@ -82,7 +87,6 @@ async function verifyPayment(paymentHeader) {
         accepts: ACCEPTS
       })
     });
-
     if (!response.ok) return { valid: false };
     const data = await response.json();
     return { valid: data.isValid === true, data };
@@ -107,7 +111,6 @@ async function settlePayment(paymentHeader) {
         accepts: ACCEPTS
       })
     });
-
     if (!response.ok) return { success: false };
     const data = await response.json();
     return { success: true, data };
@@ -121,6 +124,7 @@ export default async function handler(req) {
     return new Response(null, { status: 204, headers: cors() });
   }
 
+  // GET is challenge-only by design — always returns full 402 regardless of headers
   if (req.method === "GET") {
     return pay402();
   }
@@ -133,6 +137,7 @@ export default async function handler(req) {
     req.headers.get("PAYMENT-SIGNATURE") ||
     req.headers.get("X-PAYMENT");
 
+  // No payment header — return full 402 with accepts
   if (!paymentHeader) {
     return pay402();
   }
@@ -140,19 +145,15 @@ export default async function handler(req) {
   // Verify payment with facilitator
   const verification = await verifyPayment(paymentHeader);
   if (!verification.valid) {
-    return json({
-      error: "Payment verification failed",
-      details: "Invalid or unrecognized payment proof"
-    }, 402);
+    // Return full 402 with accepts so buyer can retry
+    return pay402("Payment verification failed — please retry with a valid payment");
   }
 
   // Settle payment with facilitator
   const settlement = await settlePayment(paymentHeader);
   if (!settlement.success) {
-    return json({
-      error: "Payment settlement failed",
-      details: "Could not settle payment on-chain"
-    }, 402);
+    // Return full 402 with accepts so buyer can retry
+    return pay402("Payment settlement failed — please retry");
   }
 
   let body;
