@@ -1,3 +1,9 @@
+[![Accepts Agent Payments](https://agents.circle.com/sell/score/badge?url=scrapeagent.xyz%2F)](https://agents.circle.com/sell/score?url=scrapeagent.xyz%2F)
+# 🕷️ Scrape Agent
+
+Pay-per-use web scraping API for AI agents. Extract clean text, links, HTML or metadata from any public URL for $0.01 USDC on Base, Arc and Polygon. No API key, no subscription, no account needed. 100/100 Circle agent-readiness score.
+
+**Endpoint:** `POST https://scrapeagent.xyz/api/scrape/x402`
 # ScrapeAgent API — Google Cloud Functions v2
 
 > Pay-per-use web scraping for AI agents.
