@@ -1,183 +1,91 @@
-import { scrapeUrl, ScrapeSchema } from "../../lib/scraper.js";
+import { paymentMiddleware, Network } from "@x402/express";
 
-const WALLET = "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1";
-const NETWORK = "eip155:8453";
-const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const FACILITATOR = "https://x402.org/facilitator";
-
-const ACCEPTS = [{
-  scheme: "exact",
-  network: NETWORK,
-  amount: "10000",
-  asset: USDC,
-  payTo: WALLET,
-  maxTimeoutSeconds: 300,
-  extra: {
-    name: "USDC",
-    version: "2"
-  }
-}];
-
-const PAYMENT_REQUIRED_BODY = {
-  x402Version: 2,
-  error: "Payment required",
-  resource: {
-    url: "https://scrapeagent.xyz/api/scrape/x402",
-    description: "Pay-per-use web scraping — $0.01 per request",
-    mimeType: "application/json"
-  },
-  accepts: ACCEPTS
-};
-
-function encodeBase64(str) {
-  const bytes = new TextEncoder().encode(str);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-PAYMENT, X-PAYMENT-RESPONSE, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, PAYMENT-RESPONSE",
-  };
-}
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...cors() },
-  });
-}
-
-// Full 402 with accepts — used for both no-header and failed-payment cases
-function pay402(extraError = null) {
-  const body = {
-    ...PAYMENT_REQUIRED_BODY,
-    ...(extraError ? { error: extraError } : {})
-  };
-  const jsonStr = JSON.stringify(body);
-  const encoded = encodeBase64(jsonStr);
-  return new Response(jsonStr, {
-    status: 402,
-    headers: {
-      "Content-Type": "application/json",
-      "PAYMENT-REQUIRED": encoded,
-      ...cors()
+const middleware = paymentMiddleware(
+  process.env.SELLER_WALLET_ADDRESS,
+  {
+    "POST /api/scrape/x402": {
+      price: "$0.01",
+      network: Network.BaseMainnet,
+      description: "Pay-per-use web scraping. Extract text, links, HTML or metadata from any public URL.",
     },
-  });
-}
-
-async function verifyPayment(paymentHeader) {
-  try {
-    const response = await fetch(`${FACILITATOR}/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        x402Version: 2,
-        payload: paymentHeader,
-        resource: {
-          url: "https://scrapeagent.xyz/api/scrape/x402",
-          description: "Pay-per-use web scraping — $0.01 per request",
-          mimeType: "application/json"
-        },
-        accepts: ACCEPTS
-      })
-    });
-    if (!response.ok) return { valid: false };
-    const data = await response.json();
-    return { valid: data.isValid === true, data };
-  } catch (err) {
-    return { valid: false, error: err.message };
+  },
+  {
+    facilitatorUrl: "https://facilitator.x402.org",
   }
-}
+);
 
-async function settlePayment(paymentHeader) {
-  try {
-    const response = await fetch(`${FACILITATOR}/settle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        x402Version: 2,
-        payload: paymentHeader,
-        resource: {
-          url: "https://scrapeagent.xyz/api/scrape/x402",
-          description: "Pay-per-use web scraping — $0.01 per request",
-          mimeType: "application/json"
-        },
-        accepts: ACCEPTS
-      })
-    });
-    if (!response.ok) return { success: false };
-    const data = await response.json();
-    return { success: true, data };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
-
-export default async function handler(req) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors() });
-  }
-
-  // GET is challenge-only by design — always returns full 402 regardless of headers
+export default async function handler(req, res) {
   if (req.method === "GET") {
-    return pay402();
+    return res.status(402).json({
+      x402Version: 2,
+      error: "Payment required",
+      resource: {
+        url: "https://scrapeagent.xyz/api/scrape/x402",
+        description: "Pay-per-use web scraping — $0.01 per request",
+        mimeType: "application/json",
+      },
+      accepts: [
+        {
+          scheme: "exact",
+          network: "eip155:8453",
+          amount: "10000",
+          asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          payTo: process.env.SELLER_WALLET_ADDRESS,
+        },
+        {
+          scheme: "exact",
+          network: "eip155:421614",
+          amount: "10000",
+          asset: "0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9",
+          payTo: process.env.SELLER_WALLET_ADDRESS,
+        },
+        {
+          scheme: "exact",
+          network: "eip155:137",
+          amount: "10000",
+          asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+          payTo: process.env.SELLER_WALLET_ADDRESS,
+        },
+      ],
+    });
   }
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const paymentHeader =
-    req.headers.get("PAYMENT-SIGNATURE") ||
-    req.headers.get("X-PAYMENT");
+  const { url, extract = "text" } = req.body || {};
 
-  // No payment header — return full 402 with accepts
-  if (!paymentHeader) {
-    return pay402();
+  if (!url) {
+    return res.status(400).json({ error: "url is required" });
   }
 
-  // Verify payment with facilitator
-  const verification = await verifyPayment(paymentHeader);
-  if (!verification.valid) {
-    // Return full 402 with accepts so buyer can retry
-    return pay402("Payment verification failed — please retry with a valid payment");
-  }
-
-  // Settle payment with facilitator
-  const settlement = await settlePayment(paymentHeader);
-  if (!settlement.success) {
-    // Return full 402 with accepts so buyer can retry
-    return pay402("Payment settlement failed — please retry");
-  }
-
-  let body;
   try {
-    body = await req.json();
-  } catch {
-    return json({ error: "Invalid JSON body" }, 400);
-  }
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)",
+      },
+    });
+    const html = await response.text();
 
-  const parsed = ScrapeSchema.safeParse(body);
-  if (!parsed.success) {
-    return json({ error: "Validation failed", issues: parsed.error.flatten() }, 422);
-  }
+    let result;
+    if (extract === "text") {
+      result = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    } else if (extract === "html") {
+      result = html;
+    } else if (extract === "links") {
+      const matches = [...html.matchAll(/href=["']([^"']+)["']/g)];
+      result = matches.map((m) => m[1]);
+    } else if (extract === "meta") {
+      const title = html.match(/<title>([^<]*)<\/title>/)?.[1] || "";
+      const desc = html.match(/name=["']description["'][^>]*content=["']([^"']+)["']/i)?.[1] || "";
+      result = { title, description: desc, url };
+    } else {
+      result = html;
+    }
 
-  const result = await scrapeUrl(parsed.data);
-  return json({
-    protocol: "x402",
-    version: 2,
-    priceUSD: "0.01",
-    settled: true,
-    ...result
-  });
+    return res.json({ url, extract, result, statusCode: response.status });
+  } catch (err) {
+    return res.status(500).json({ error: "Scrape failed", detail: err.message });
+  }
 }
-
-export const config = {
-  runtime: "edge",
-};
