@@ -3,21 +3,17 @@
   "info": {
     "title": "Scrape Agent",
     "version": "2.0.0",
-    "description": "Pay-per-use web scraping API built on x402. Extract clean text, links, HTML or metadata from any public URL for $0.01 USDC. No API key, no subscription, no account needed. Perfect for AI agents that need web data on demand.",
+    "description": "Pay-per-use web scraping API built on x402. Extract clean text, links, HTML or metadata from any public URL for $0.01 USDC.",
     "contact": {
-      "name": "Scrape Agent Support",
+      "name": "Scrape Agent",
       "email": "artespraticas@gmail.com",
       "url": "https://scrapeagent.xyz"
     },
-    "x-payment": {
-      "price": "$0.01",
-      "networks": ["eip155:8453", "eip155:421614", "eip155:137"],
-      "token": "USDC"
-    }
+    "x-guidance": "Call POST /api/scrape/x402 with a JSON body containing a URL and extract type. Pay $0.01 USDC via x402 on Base, Arc, or Polygon. Input: url (string, required), extract (text|html|links|meta, default: text). Output: JSON with url, extract, result, statusCode. Use this when you need clean text or structured data from any public webpage. No API key or account required."
   },
   "externalDocs": {
-    "description": "Full documentation, examples and integration guides",
-    "url": "https://scrapeagent.xyz/openapi.json"
+    "description": "Full documentation and integration guides",
+    "url": "https://scrapeagent.xyz"
   },
   "servers": [
     {
@@ -29,8 +25,19 @@
     "/api/scrape/x402": {
       "post": {
         "operationId": "scrapeUrl",
-        "summary": "Scrape any public URL",
-        "description": "Extract clean text, links, HTML or metadata from any public URL. Payment of $0.01 USDC required via x402 on Base, Arc or Polygon. Returns 402 without payment header.",
+        "summary": "Scrape any public URL and return clean content",
+        "description": "Extract text, links, HTML or metadata from any public URL. Requires $0.01 USDC payment via x402 on Base, Arc or Polygon. Returns 402 without valid X-PAYMENT header.",
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USDC",
+            "amount": "0.010000"
+          },
+          "protocols": [
+            { "x402": {} },
+            { "mpp": {} }
+          ]
+        },
         "requestBody": {
           "required": true,
           "content": {
@@ -48,7 +55,7 @@
                     "type": "string",
                     "enum": ["text", "html", "links", "meta"],
                     "default": "text",
-                    "description": "What to extract from the page"
+                    "description": "What to extract: text (clean readable text), html (raw HTML), links (all href URLs), meta (title and description)"
                   }
                 }
               },
@@ -78,12 +85,18 @@
                     },
                     "statusCode": { "type": "integer" }
                   }
+                },
+                "example": {
+                  "url": "https://example.com",
+                  "extract": "text",
+                  "result": "Example Domain. This domain is for use in illustrative examples.",
+                  "statusCode": 200
                 }
               }
             }
           },
           "402": {
-            "description": "Payment required — include X-PAYMENT header with valid x402 USDC payment"
+            "description": "Payment required. Include X-PAYMENT header with valid x402 USDC payment on Base (eip155:8453), Arc (eip155:421614), or Polygon (eip155:137)."
           },
           "400": {
             "description": "Bad request — url field is required"
@@ -91,19 +104,15 @@
           "500": {
             "description": "Scrape failed — target URL may be unavailable"
           }
-        },
-        "x-x402": {
-          "price": "$0.01",
-          "networks": ["eip155:8453", "eip155:421614", "eip155:137"]
         }
       },
       "get": {
-        "operationId": "scrapeUrlGet",
-        "summary": "Returns 402 payment challenge",
-        "description": "GET returns the x402 payment requirements. Use POST with X-PAYMENT header to scrape.",
+        "operationId": "scrapeUrlChallenge",
+        "summary": "Returns x402 payment challenge",
+        "description": "GET returns the x402 payment requirements without charging. Use POST with X-PAYMENT header to scrape.",
         "responses": {
           "402": {
-            "description": "Payment required"
+            "description": "Payment required — inspect accepts[] for payment options"
           }
         }
       }
