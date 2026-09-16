@@ -2,58 +2,35 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Scrape Agent",
-    "version": "1.0.0",
-    "description": "Pay-per-use web scraping API built on x402. Extract clean text, links or HTML from any URL for $0.01 USDC on Base.",
-    "x-guidance": "Use POST /api/scrape/x402 to scrape any public URL. Send a JSON body with a 'url' field (required) and optional 'extract' field (text|html|links|meta|full). Payment of $0.01 USDC on Base is required via x402 protocol. No API key needed."
+    "version": "2.0.0",
+    "description": "Pay-per-use web scraping API built on x402. Extract clean text, links, HTML or metadata from any public URL for $0.01 USDC. No API key, no subscription, no account needed. Perfect for AI agents that need web data on demand.",
+    "contact": {
+      "name": "Scrape Agent Support",
+      "email": "artespraticas@gmail.com",
+      "url": "https://scrapeagent.xyz"
+    },
+    "x-payment": {
+      "price": "$0.01",
+      "networks": ["eip155:8453", "eip155:421614", "eip155:137"],
+      "token": "USDC"
+    }
   },
+  "externalDocs": {
+    "description": "Full documentation, examples and integration guides",
+    "url": "https://scrapeagent.xyz/openapi.json"
+  },
+  "servers": [
+    {
+      "url": "https://scrapeagent.xyz",
+      "description": "Production"
+    }
+  ],
   "paths": {
     "/api/scrape/x402": {
       "post": {
         "operationId": "scrapeUrl",
-        "summary": "Scrape a URL - Extract clean content from any public webpage",
-        "tags": ["Scraping"],
-        "x-payment-info": {
-          "price": {
-            "mode": "fixed",
-            "currency": "USD",
-            "amount": "0.010000"
-          },
-          "protocols": [{ "x402": {} }]
-        },
-        "x-bazaar": {
-          "schema": {
-            "properties": {
-              "input": {
-                "type": "object",
-                "required": ["url"],
-                "properties": {
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "The URL to scrape"
-                  },
-                  "extract": {
-                    "type": "string",
-                    "enum": ["text", "html", "links", "meta", "full"],
-                    "default": "text",
-                    "description": "What to extract from the page"
-                  }
-                }
-              },
-              "output": {
-                "type": "object",
-                "properties": {
-                  "url": { "type": "string" },
-                  "status": { "type": "string" },
-                  "title": { "type": "string" },
-                  "content": { "type": "string" },
-                  "wordCount": { "type": "number" },
-                  "elapsed": { "type": "number" }
-                }
-              }
-            }
-          }
-        },
+        "summary": "Scrape any public URL",
+        "description": "Extract clean text, links, HTML or metadata from any public URL. Payment of $0.01 USDC required via x402 on Base, Arc or Polygon. Returns 402 without payment header.",
         "requestBody": {
           "required": true,
           "content": {
@@ -64,50 +41,69 @@
                 "properties": {
                   "url": {
                     "type": "string",
-                    "format": "uri",
-                    "minLength": 1,
-                    "description": "The URL to scrape"
+                    "description": "The public URL to scrape",
+                    "example": "https://example.com"
                   },
                   "extract": {
                     "type": "string",
-                    "enum": ["text", "html", "links", "meta", "full"],
+                    "enum": ["text", "html", "links", "meta"],
                     "default": "text",
                     "description": "What to extract from the page"
-                  },
-                  "timeout": {
-                    "type": "number",
-                    "minimum": 1000,
-                    "maximum": 15000,
-                    "default": 8000,
-                    "description": "Timeout in milliseconds"
                   }
                 }
+              },
+              "example": {
+                "url": "https://example.com",
+                "extract": "text"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Scrape successful",
+            "description": "Successful scrape",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["url", "status"],
                   "properties": {
                     "url": { "type": "string" },
-                    "status": { "type": "string" },
-                    "title": { "type": "string" },
-                    "content": { "type": "string" },
-                    "wordCount": { "type": "number" },
-                    "elapsed": { "type": "number" }
+                    "extract": { "type": "string" },
+                    "result": {
+                      "oneOf": [
+                        { "type": "string" },
+                        { "type": "array", "items": { "type": "string" } },
+                        { "type": "object" }
+                      ]
+                    },
+                    "statusCode": { "type": "integer" }
                   }
                 }
               }
             }
           },
           "402": {
-            "description": "Payment Required - send 0.01 USDC on Base via x402"
+            "description": "Payment required — include X-PAYMENT header with valid x402 USDC payment"
+          },
+          "400": {
+            "description": "Bad request — url field is required"
+          },
+          "500": {
+            "description": "Scrape failed — target URL may be unavailable"
+          }
+        },
+        "x-x402": {
+          "price": "$0.01",
+          "networks": ["eip155:8453", "eip155:421614", "eip155:137"]
+        }
+      },
+      "get": {
+        "operationId": "scrapeUrlGet",
+        "summary": "Returns 402 payment challenge",
+        "description": "GET returns the x402 payment requirements. Use POST with X-PAYMENT header to scrape.",
+        "responses": {
+          "402": {
+            "description": "Payment required"
           }
         }
       }
