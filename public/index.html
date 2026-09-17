@@ -23,6 +23,7 @@
     @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 1.8rem; } }
     .wallet { font-family: monospace; font-size: 0.8rem; color: #666; word-break: break-all; }
     a { color: #4ade80; text-decoration: none; }
+    .chain-pill { display: inline-block; background: #0f1f17; border: 1px solid #2a5a3a; color: #4ade80; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin: 2px; }
   </style>
 </head>
 <body>
@@ -30,9 +31,10 @@
 <div class="hero">
   <h1>🕷️ Scrape Agent</h1>
   <p>Pay-per-use web scraping API for AI agents. No subscription, no API key.</p>
-<span class="badge">x402 Protocol</span>
-<span class="badge">Base · Arc · Polygon</span>
-<span class="badge">USDC Payments</span>
+  <span class="badge">x402 Protocol</span>
+  <span class="badge">Base · Arc · Polygon</span>
+  <span class="badge">USDC Payments</span>
+  <span class="badge">100/100 Circle Score</span>
 </div>
 
 <div class="container">
@@ -41,7 +43,12 @@
     <h2>Pricing</h2>
     <div class="card">
       <div class="price">$0.01 USDC</div>
-      <p style="color:#888; margin-top:8px;">Per request — pay only for what you use. Payments go directly to the provider wallet on Base.</p>
+      <p style="color:#888; margin-top:8px;">Per request — pay only for what you use. Payments go directly to the provider wallet.</p>
+      <p style="color:#888; margin-top:8px;">Accepted on:
+        <span class="chain-pill">⬡ Base (eip155:8453)</span>
+        <span class="chain-pill">◈ Arc (eip155:421614)</span>
+        <span class="chain-pill">⬟ Polygon (eip155:137)</span>
+      </p>
       <p class="wallet" style="margin-top:12px;">Payment address: 0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1</p>
     </div>
   </div>
@@ -102,8 +109,8 @@ X-PAYMENT: &lt;x402-payment-proof&gt;
       <p style="color:#888;">Send a POST request without payment — receive a 402 response with payment instructions.</p>
     </div>
     <div class="card">
-      <h3>2. Pay $0.01 USDC on Base</h3>
-      <p style="color:#888;">Use any x402-compatible client like <a href="https://agentcash.dev">AgentCash</a> to handle payment automatically.</p>
+      <h3>2. Pay $0.01 USDC on Base, Arc or Polygon</h3>
+      <p style="color:#888;">Use any x402-compatible client like <a href="https://agentcash.dev">AgentCash</a> to handle payment automatically on any supported chain.</p>
     </div>
     <div class="card">
       <h3>3. Retry with payment proof</h3>
@@ -134,13 +141,24 @@ X-PAYMENT: &lt;x402-payment-proof&gt;
         <a href="/llms.txt">/llms.txt</a>
       </div>
       <div class="card">
-        <h3>Network</h3>
-        <p style="color:#888;">Base Mainnet (eip155:8453)</p>
+        <h3>Networks</h3>
+        <p style="margin-top:4px;">
+          <span class="chain-pill">⬡ Base (eip155:8453)</span><br>
+          <span class="chain-pill" style="margin-top:6px; display:inline-block;">◈ Arc (eip155:421614)</span><br>
+          <span class="chain-pill" style="margin-top:6px; display:inline-block;">⬟ Polygon (eip155:137)</span>
+        </p>
+      </div>
+      <div class="card">
+        <h3>Circle Score</h3>
+        <a href="https://agents.circle.com/sell/score?url=scrapeagent.xyz" target="_blank">
+          <span style="font-size:1.8rem; font-weight:700; color:#4ade80;">100</span>
+          <span style="color:#888; font-size:0.85rem;">/100 · Runtime-verified</span>
+        </a>
       </div>
       <div class="card">
         <h3>MCP Server</h3>
         <a href="https://smithery.ai/servers/artespraticas/scrape-agent-mcp">
-          <img src="https://smithery.ai/badge/artespraticas/scrape-agent-mcp" 
+          <img src="https://smithery.ai/badge/artespraticas/scrape-agent-mcp"
                alt="smithery badge" style="height:32px; margin-top:4px;">
         </a>
       </div>
