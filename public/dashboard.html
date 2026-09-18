@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrape Agent — Income Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1b2f;
+      --bg-gradient: linear-gradient(160deg, #0d1b2f 0%, #0a1520 100%);
+      --surface: #111f35;
+      --surface-strong: #162740;
+      --surface-muted: #0f1a2e;
+      --border: rgba(172,198,233,0.12);
+      --accent: #acc6e9;
+      --ink: #e8f0f9;
+      --ink-2: #b8cfe8;
+      --subtle: #6a8aaa;
+      --muted: #8aaac8;
+      --success: #8dd89f;
+      --danger: #f87171;
+      --base-color: #acc6e9;
+      --arc-color: #8dd89f;
+      --polygon-color: #b39ddb;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+    .header {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+      background: rgba(13,27,47,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--accent); color: #0d1b2f;
+      font-weight: 700; font-size: 12px; font-family: monospace;
+    }
+    .header-title { font-weight: 600; font-size: 15px; color: var(--ink); }
+    .header-sub { font-size: 11px; color: var(--subtle); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 8px; font-size: 12px;
+      font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface-strong); color: var(--ink-2);
+      text-decoration: none; transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.8; }
+    .btn.accent { color: var(--accent); background: var(--surface); }
+    .btn svg { width: 13px; height: 13px; }
+    #last-updated { font-size: 11px; color: var(--subtle); }
+    .main { max-width: 900px; margin: 0 auto; padding: 32px 16px; display: flex; flex-direction: column; gap: 20px; }
+    .hero-card {
+      border-radius: 20px; padding: 28px 32px;
+      background: var(--surface-strong); border: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end;
+    }
+    .hero-left { flex: 1; min-width: 200px; }
+    .hero-label { font-size: 13px; color: var(--subtle); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .hero-label svg { width: 14px; height: 14px; }
+    .hero-amount {
+      font-size: 52px; font-weight: 700; color: var(--ink);
+      letter-spacing: -0.04em; line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .hero-sub { font-size: 13px; color: var(--subtle); margin-top: 8px; }
+    .hero-sub span { color: var(--muted); font-weight: 500; }
+    .sparkline-wrap { flex-shrink: 0; }
+    .sparkline-label { font-size: 11px; color: var(--subtle); margin-bottom: 6px; }
+    .chain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media(max-width: 600px) { .chain-grid { grid-template-columns: 1fr; } .hero-amount { font-size: 38px; } }
+    .chain-card {
+      border-radius: 20px; padding: 20px;
+      background: var(--surface); border: 1px solid var(--border);
+    }
+    .chain-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .chain-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+    .chain-name { font-weight: 600; font-size: 13px; color: var(--ink-2); }
+    .chain-amount { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+    .chain-requests { font-size: 12px; color: var(--subtle); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .chain-requests svg { width: 11px; height: 11px; }
+    .rate-card {
+      border-radius: 20px; padding: 20px 24px;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 16px;
+    }
+    .rate-icon {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      background: var(--accent); color: #0d1b2f;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rate-icon svg { width: 18px; height: 18px; }
+    .rate-title { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+    .rate-sub { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+    .rate-right { margin-left: auto; text-align: right; }
+    .rate-num { font-size: 18px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .rate-label { font-size: 11px; color: var(--subtle); }
+    .feed-card {
+      border-radius: 20px; overflow: hidden;
+      background: var(--surface-muted); border: 1px solid var(--border);
+    }
+    .feed-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+    }
+    .feed-title { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 13px; color: var(--ink-2); }
+    .feed-title svg { width: 14px; height: 14px; }
+    .feed-count { font-size: 11px; color: var(--subtle); font-family: monospace; }
+    .payment-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .payment-row:last-child { border-bottom: none; }
+    .payment-row:hover { background: var(--surface); }
+    .payment-chain-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
+    .payment-meta { flex: 1; min-width: 0; }
+    .payment-from { font-family: monospace; font-size: 11px; color: var(--subtle); }
+    .payment-hash { font-family: monospace; font-size: 11px; color: var(--subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .payment-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .payment-amount { font-size: 13px; font-weight: 600; color: var(--success); font-variant-numeric: tabular-nums; }
+    .payment-link { opacity: 0.4; transition: opacity 0.2s; color: var(--accent); }
+    .payment-link:hover { opacity: 0.9; }
+    .payment-link svg { width: 13px; height: 13px; }
+    .empty-state { padding: 40px; text-align: center; color: var(--subtle); }
+    .empty-state .spinner {
+      width: 20px; height: 20px; border-radius: 50%; margin: 0 auto 12px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-title { font-size: 13px; margin-bottom: 4px; }
+    .empty-sub { font-size: 11px; }
+    .footer { text-align: center; padding-bottom: 16px; font-size: 11px; color: var(--subtle); font-family: monospace; }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">SA</div>
+    <div>
+      <div class="header-title">Scrape Agent</div>
+      <div class="header-sub">Income Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="last-updated"></span>
+    <button class="btn" onclick="refresh()">
+      <svg id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      Refresh
+    </button>
+    <a class="btn accent" href="https://basescan.org/address/0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Explorer
+    </a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="hero-card">
+    <div class="hero-left">
+      <div class="hero-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Total earned (last ~10,000 blocks per chain)
+      </div>
+      <div class="hero-amount" id="total-amount">$0.0000</div>
+      <div class="hero-sub"><span id="total-requests">0</span> requests across 3 chains</div>
+    </div>
+    <div class="sparkline-wrap">
+      <div class="sparkline-label">24h activity</div>
+      <svg id="sparkline" width="200" height="40" viewBox="0 0 200 40">
+        <text x="100" y="24" text-anchor="middle" font-size="11" fill="var(--subtle)">Loading…</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="chain-grid">
+    <div class="chain-card">
+      <div class="chain-card-header">
+        <div class="chain-dot" style="background:rgba(172,198,233,0.2);color:var(--base-color);">⬡</div>
+        <span class="chain-name">Base</span>
+      </div>
+      <div class="chain-amount" style="color:var(--base-color)" id="base-amount">$0.0000</div>
+      <div class="chain-requests">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span id="base-count">0 requests</span>
+      </div>
+    </div>
+    <div class="chain-card">
+      <div class="chain-card-header">
+        <div class="chain-dot" style="background:rgba(141,216,159,0.2);color:var(--arc-color);">A</div>
+        <span class="chain-name">Arc</span>
+      </div>
+      <div class="chain-amount" style="color:var(--arc-color)" id="arc-amount">$0.0000</div>
+      <div class="chain-requests">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span id="arc-count">0 requests</span>
+      </div>
+    </div>
+    <div class="chain-card">
+      <div class="chain-card-header">
+        <div
