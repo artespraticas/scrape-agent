@@ -9,7 +9,7 @@
       "email": "artespraticas@gmail.com",
       "url": "https://scrapeagent.xyz"
     },
-    "x-guidance": "Use POST /api/scrape/x402 with a JSON body containing a public URL and an extract type. The endpoint costs $0.01 per request and uses x402 payment in USDC on Base or Polygon. No API key or account is required. Start by calling the endpoint without payment to receive the HTTP 402 payment challenge, then retry with a valid x402 payment. Input: url (required string), extract (text|html|links|meta, default text). Output: JSON containing url, extract, result, and statusCode."
+    "x-guidance": "Use POST /api/scrape/x402 with a JSON body containing a public URL and an extract type. The endpoint costs $0.01 per request and uses x402 payment in USDC on Base, Arc, or Polygon. No API key or account is required. Start by calling the endpoint without payment to receive the HTTP 402 payment challenge, then retry with a valid x402 payment. Input: url (required string), extract (text|html|links|meta, default text). Output: JSON containing url, extract, result, and statusCode."
   },
   "externalDocs": {
     "description": "Full documentation and integration guides",
@@ -26,7 +26,7 @@
       "post": {
         "operationId": "scrapeUrl",
         "summary": "Scrape any public URL and return clean content",
-        "description": "Extract text, links, HTML or metadata from any public URL. Requires $0.01 USD payment in USDC via x402 on Base or Polygon. An unpaid request returns HTTP 402 with payment requirements before request-body validation.",
+        "description": "Extract text, links, HTML or metadata from any public URL. Requires $0.01 USD payment in USDC via x402 on Base, Arc, or Polygon. An unpaid request returns HTTP 402 with payment requirements before request-body validation.",
         "x-payment-info": {
           "price": {
             "mode": "fixed",
