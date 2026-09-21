@@ -3,13 +3,13 @@
   "info": {
     "title": "Scrape Agent",
     "version": "2.0.0",
-    "description": "Pay-per-use web scraping API built on x402. Extract clean text, links, HTML or metadata from any public URL for $0.01 USDC.",
+    "description": "Pay-per-use web scraping API for AI agents. Extract clean text, links, HTML or metadata from any public URL for $0.01 USD, paid in USDC via x402.",
     "contact": {
       "name": "Scrape Agent",
       "email": "artespraticas@gmail.com",
       "url": "https://scrapeagent.xyz"
     },
-    "x-guidance": "Call POST /api/scrape/x402 with a JSON body containing a URL and extract type. Pay $0.01 USDC via x402 on Base, Arc, or Polygon. Input: url (string, required), extract (text|html|links|meta, default: text). Output: JSON with url, extract, result, statusCode. Use this when you need clean text or structured data from any public webpage. No API key or account required."
+    "x-guidance": "Use POST /api/scrape/x402 with a JSON body containing a public URL and an extract type. The endpoint costs $0.01 per request and uses x402 payment in USDC on Base or Polygon. No API key or account is required. Start by calling the endpoint without payment to receive the HTTP 402 payment challenge, then retry with a valid x402 payment. Input: url (required string), extract (text|html|links|meta, default text). Output: JSON containing url, extract, result, and statusCode."
   },
   "externalDocs": {
     "description": "Full documentation and integration guides",
@@ -26,16 +26,17 @@
       "post": {
         "operationId": "scrapeUrl",
         "summary": "Scrape any public URL and return clean content",
-        "description": "Extract text, links, HTML or metadata from any public URL. Requires $0.01 USDC payment via x402 on Base, Arc or Polygon. Returns 402 without valid X-PAYMENT header.",
+        "description": "Extract text, links, HTML or metadata from any public URL. Requires $0.01 USD payment in USDC via x402 on Base or Polygon. An unpaid request returns HTTP 402 with payment requirements before request-body validation.",
         "x-payment-info": {
           "price": {
             "mode": "fixed",
-            "currency": "USDC",
+            "currency": "USD",
             "amount": "0.010000"
           },
           "protocols": [
-            { "x402": {} },
-            { "mpp": {} }
+            {
+              "x402": {}
+            }
           ]
         },
         "requestBody": {
@@ -44,24 +45,33 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url"],
+                "additionalProperties": false,
+                "required": [
+                  "url"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
+                    "format": "uri",
                     "description": "The public URL to scrape",
                     "example": "https://example.com"
                   },
                   "extract": {
                     "type": "string",
-                    "enum": ["text", "html", "links", "meta"],
+                    "enum": [
+                      "text",
+                      "html",
+                      "links",
+                      "meta"
+                    ],
                     "default": "text",
-                    "description": "What to extract: text (clean readable text), html (raw HTML), links (all href URLs), meta (title and description)"
+                    "description": "What to extract: text (clean readable text), html (raw HTML), links (all href URLs), or meta (title and description)"
                   }
+                },
+                "example": {
+                  "url": "https://example.com",
+                  "extract": "text"
                 }
-              },
-              "example": {
-                "url": "https://example.com",
-                "extract": "text"
               }
             }
           }
@@ -73,17 +83,44 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": [
+                    "url",
+                    "extract",
+                    "result",
+                    "statusCode"
+                  ],
                   "properties": {
-                    "url": { "type": "string" },
-                    "extract": { "type": "string" },
-                    "result": {
-                      "oneOf": [
-                        { "type": "string" },
-                        { "type": "array", "items": { "type": "string" } },
-                        { "type": "object" }
+                    "url": {
+                      "type": "string"
+                    },
+                    "extract": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "html",
+                        "links",
+                        "meta"
                       ]
                     },
-                    "statusCode": { "type": "integer" }
+                    "result": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
                   }
                 },
                 "example": {
@@ -95,11 +132,11 @@
               }
             }
           },
-          "402": {
-            "description": "Payment required. Include X-PAYMENT header with valid x402 USDC payment on Base (eip155:8453), Arc (eip155:421614), or Polygon (eip155:137)."
-          },
           "400": {
             "description": "Bad request — url field is required"
+          },
+          "402": {
+            "description": "Payment required. The response contains x402 payment requirements for the supported USDC payment networks."
           },
           "500": {
             "description": "Scrape failed — target URL may be unavailable"
@@ -108,11 +145,11 @@
       },
       "get": {
         "operationId": "scrapeUrlChallenge",
-        "summary": "Returns x402 payment challenge",
-        "description": "GET returns the x402 payment requirements without charging. Use POST with X-PAYMENT header to scrape.",
+        "summary": "Return the x402 payment challenge",
+        "description": "Returns the x402 payment requirements without charging. Use POST with valid payment to scrape a URL.",
         "responses": {
           "402": {
-            "description": "Payment required — inspect accepts[] for payment options"
+            "description": "Payment required — inspect the response payment requirements."
           }
         }
       }
