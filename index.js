@@ -6,7 +6,6 @@ import { BatchFacilitatorClient, GatewayEvmScheme } from "@circle-fin/x402-batch
 const app = express();
 app.use(express.json());
 
-// Circle Gateway middleware (Base + Polygon)
 const server = new x402ResourceServer([
   new HTTPFacilitatorClient({ url: "https://facilitator.x402.org" }),
   new BatchFacilitatorClient({
@@ -21,6 +20,7 @@ const paymentMiddleware = server.middleware({
   "POST /api/scrape/x402": {
     accepts: [
       { scheme: "exact", price: "$0.01", network: "eip155:8453", payTo: process.env.SELLER_WALLET_ADDRESS },
+      { scheme: "exact", price: "$0.01", network: "eip155:5042", payTo: process.env.SELLER_WALLET_ADDRESS },
       { scheme: "exact", price: "$0.01", network: "eip155:137", payTo: process.env.SELLER_WALLET_ADDRESS }
     ],
     description: "Pay-per-use web scraping. Extract text, links, HTML or metadata from any public URL. No API key or account needed.",
@@ -69,7 +69,7 @@ app.get("/", (req, res) => {
     version: "2.0.0",
     endpoint: "/api/scrape/x402",
     price: "$0.01 USDC",
-    networks: ["Base", "Polygon"],
+    networks: ["Base", "Arc", "Polygon"],
     docs: "https://scrapeagent.xyz/openapi.json",
   });
 });
