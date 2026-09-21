@@ -1,6 +1,5 @@
 export default async function handler(req, res) {
-
-  // ── Payment challenge (GET or missing payment header) ──────────────────────
+  // Payment challenge. Do this before body validation so discovery clients receive 402.
   const paymentHeader = req.headers["x-payment"];
 
   const challenge = {
@@ -21,9 +20,9 @@ export default async function handler(req, res) {
       },
       {
         scheme: "exact",
-        network: "eip155:421614",
+        network: "eip155:5042",
         amount: "10000",
-        asset: "0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9",
+        asset: "0x3600000000000000000000000000000000000000",
         payTo: process.env.SELLER_WALLET_ADDRESS,
       },
       {
@@ -41,7 +40,6 @@ export default async function handler(req, res) {
     return res.status(402).json(challenge);
   }
 
-  // ── POST with payment header — verify and scrape ───────────────────────────
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -53,7 +51,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify payment with x402 facilitator
     const verifyRes = await fetch("https://facilitator.x402.org/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,7 +69,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Payment verified — scrape the URL
     const response = await fetch(url, {
       headers: {
         "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)",
@@ -99,7 +95,6 @@ export default async function handler(req, res) {
       result = html;
     }
 
-    // Settle payment
     fetch("https://facilitator.x402.org/settle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,7 +106,6 @@ export default async function handler(req, res) {
     }).catch(() => {});
 
     return res.json({ url, extract, result, statusCode: response.status });
-
   } catch (err) {
     return res.status(500).json({
       error: "Scrape failed",
