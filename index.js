@@ -1,23 +1,14 @@
 import express from "express";
-import {
-  x402ResourceServer
-} from "@x402/express";
-import {
-  HTTPFacilitatorClient
-} from "@x402/core/server";
-import {
-  BatchFacilitatorClient,
-  GatewayEvmScheme
-} from "@circle-fin/x402-batching/server";
+import { x402ResourceServer } from "@x402/express";
+import { HTTPFacilitatorClient } from "@x402/core/server";
+import { BatchFacilitatorClient, GatewayEvmScheme } from "@circle-fin/x402-batching/server";
 
 const app = express();
 app.use(express.json());
 
-// ─── Circle Gateway middleware (Arc mainnet + Base) ───────────────────────────
+// Circle Gateway middleware (Base + Polygon)
 const server = new x402ResourceServer([
-  new HTTPFacilitatorClient({
-    url: "https://facilitator.x402.org"
-  }),
+  new HTTPFacilitatorClient({ url: "https://facilitator.x402.org" }),
   new BatchFacilitatorClient({
     facilitatorUrl: "https://gateway-api.circle.com",
     sellerAddress: process.env.SELLER_WALLET_ADDRESS,
@@ -29,24 +20,8 @@ await server.initialize();
 const paymentMiddleware = server.middleware({
   "POST /api/scrape/x402": {
     accepts: [
-      {
-        scheme: "exact",
-        price: "$0.01",
-        network: "eip155:8453",        // Base mainnet
-        payTo: process.env.SELLER_WALLET_ADDRESS,
-      },
-      {
-        scheme: "exact",
-        price: "$0.01",
-        network: "eip155:421614",      // Arc mainnet (launched today!)
-        payTo: process.env.SELLER_WALLET_ADDRESS,
-      },
-      {
-        scheme: "exact",
-        price: "$0.01",
-        network: "eip155:137",         // Polygon (wider fill rate)
-        payTo: process.env.SELLER_WALLET_ADDRESS,
-      },
+      { scheme: "exact", price: "$0.01", network: "eip155:8453", payTo: process.env.SELLER_WALLET_ADDRESS },
+      { scheme: "exact", price: "$0.01", network: "eip155:137", payTo: process.env.SELLER_WALLET_ADDRESS }
     ],
     description: "Pay-per-use web scraping. Extract text, links, HTML or metadata from any public URL. No API key or account needed.",
     mimeType: "application/json",
@@ -55,13 +30,9 @@ const paymentMiddleware = server.middleware({
 
 app.use(paymentMiddleware);
 
-// ─── Scrape endpoint ──────────────────────────────────────────────────────────
 app.post("/api/scrape/x402", async (req, res) => {
   const { url, extract = "text" } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ error: "url is required" });
-  }
+  if (!url) return res.status(400).json({ error: "url is required" });
 
   try {
     const response = await fetch(url, {
@@ -91,7 +62,6 @@ app.post("/api/scrape/x402", async (req, res) => {
   }
 });
 
-// ─── Health + discovery ───────────────────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({
     name: "Scrape Agent",
@@ -99,7 +69,7 @@ app.get("/", (req, res) => {
     version: "2.0.0",
     endpoint: "/api/scrape/x402",
     price: "$0.01 USDC",
-    networks: ["Base", "Arc", "Polygon"],
+    networks: ["Base", "Polygon"],
     docs: "https://scrapeagent.xyz/openapi.json",
   });
 });
