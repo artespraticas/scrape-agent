@@ -13,7 +13,7 @@ POST https://scrapeagent.xyz/api/scrape/x402
 Protocol: x402
 Asset: USDC
 Price: $0.01 per request
-Supported networks: Base (eip155:8453), Polygon (eip155:137)
+Supported networks: Base (eip155:8453), Arc (eip155:5042), Polygon (eip155:137)
 Payment destination: provided in the x402 payment challenge
 
 ## Request format
