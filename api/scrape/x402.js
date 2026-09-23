@@ -2,7 +2,7 @@
  * Scrape Agent — x402 pay-per-use scraping endpoint
  *
  * Self-verifies EIP-712 TransferWithAuthorization signatures using viem.
- * Supports Base (eip155:8453), Arc Mainnet (eip155:5042), Arc Testnet (eip155:5042002), Polygon (eip155:137).
+ * Supports Base (eip155:8453), Arc Mainnet (eip155:5042), Polygon (eip155:137).
  */
 
 import express from 'express'
@@ -23,11 +23,7 @@ const CHAINS = {
     usdc: '0x3600000000000000000000000000000000000000',
     domain: { name: 'USD Coin', version: '2' },
   },
-  'eip155:5042002': {
-    chainId: 5042002,
-    usdc: '0x3600000000000000000000000000000000000000',
-    domain: { name: 'USD Coin', version: '2' },
-  },
+
   'eip155:137': {
     chainId: 137,
     usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
