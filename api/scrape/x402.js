@@ -78,21 +78,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    const verifyRes = await fetch("https://facilitator.x402.org/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        payload: paymentHeader,
-        resource: challenge.resource,
-        accepts: challenge.accepts,
-      }),
-    });
+    let verifyRes;
+    try {
+      verifyRes = await fetch("https://x402.org/facilitator/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentPayload: paymentHeader,
+          paymentRequirements: challenge.accepts,
+        }),
+      });
+    } catch (fetchErr) {
+      return res.status(500).json({ error: "Facilitator unreachable", detail: String(fetchErr) });
+    }
 
     if (!verifyRes.ok) {
       const err = await verifyRes.json().catch(() => ({}));
       return res.status(402).json({
         ...challenge,
-        error: err.error || "Payment verification failed",
+        error: err.invalidReason || err.error || "Payment verification failed",
+      });
+    }
+
+    const verifyData = await verifyRes.json().catch(() => ({}));
+    if (!verifyData.isValid) {
+      return res.status(402).json({
+        ...challenge,
+        error: verifyData.invalidReason || "Payment invalid",
       });
     }
 
@@ -122,13 +134,12 @@ export default async function handler(req, res) {
       result = html;
     }
 
-    fetch("https://facilitator.x402.org/settle", {
+    fetch("https://x402.org/facilitator/settle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        payload: paymentHeader,
-        resource: challenge.resource,
-        accepts: challenge.accepts,
+        paymentPayload: paymentHeader,
+        paymentRequirements: challenge.accepts,
       }),
     }).catch(() => {});
 
