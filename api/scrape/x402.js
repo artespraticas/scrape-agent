@@ -25,6 +25,7 @@ export default async function handler(req, res) {
         network: "eip155:8453",
         amount: "10000",
         maxAmountRequired: "10000",
+        maxTimeoutSeconds: 300,
         asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         payTo: process.env.SELLER_WALLET_ADDRESS,
         extra: {
@@ -38,6 +39,7 @@ export default async function handler(req, res) {
         network: "eip155:5042",
         amount: "10000",
         maxAmountRequired: "10000",
+        maxTimeoutSeconds: 300,
         asset: "0x3600000000000000000000000000000000000000",
         payTo: process.env.SELLER_WALLET_ADDRESS,
         extra: {
@@ -51,6 +53,7 @@ export default async function handler(req, res) {
         network: "eip155:137",
         amount: "10000",
         maxAmountRequired: "10000",
+        maxTimeoutSeconds: 300,
         asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
         payTo: process.env.SELLER_WALLET_ADDRESS,
         extra: {
