@@ -1,6 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api", "destination": "/api/index" }
+    { "source": "/api", "destination": "/api/index" },
+    { "source": "/((?!api|_next|assets|favicon|llms.txt|openapi.json|dashboard.html|\\.well-known).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/scrape/x402.js": {
