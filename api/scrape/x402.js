@@ -157,7 +157,7 @@ function extractContent(html, mode, url) {
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
-app.post('/', async (req, res) => {
+app.post('*', async (req, res) => {
   const paymentHeader = req.headers['x-payment'] ?? req.headers['payment-signature']
 
   if (!paymentHeader) {
