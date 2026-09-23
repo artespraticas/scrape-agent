@@ -17,6 +17,11 @@ export default async function handler(req, res) {
         amount: "10000",
         asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         payTo: process.env.SELLER_WALLET_ADDRESS,
+        extra: {
+          name: "USD Coin",
+          version: "2",
+          assetTransferMethod: "eip3009",
+        },
       },
       {
         scheme: "exact",
@@ -24,6 +29,11 @@ export default async function handler(req, res) {
         amount: "10000",
         asset: "0x3600000000000000000000000000000000000000",
         payTo: process.env.SELLER_WALLET_ADDRESS,
+        extra: {
+          name: "USD Coin",
+          version: "2",
+          assetTransferMethod: "eip3009",
+        },
       },
       {
         scheme: "exact",
@@ -31,6 +41,11 @@ export default async function handler(req, res) {
         amount: "10000",
         asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
         payTo: process.env.SELLER_WALLET_ADDRESS,
+        extra: {
+          name: "USD Coin",
+          version: "2",
+          assetTransferMethod: "eip3009",
+        },
       },
     ],
   };
