@@ -2,7 +2,20 @@
   "rewrites": [
     { "source": "/api", "destination": "/api/index" }
   ],
+  "functions": {
+    "api/scrape/x402.js": {
+      "maxDuration": 30
+    }
+  },
   "headers": [
+    {
+      "source": "/api/scrape/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-PAYMENT" }
+      ]
+    },
     {
       "source": "/.well-known/x402",
       "headers": [
