@@ -1,4 +1,13 @@
 export default async function handler(req, res) {
+  // Handle CORS preflight so browsers can call this endpoint directly.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-PAYMENT");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
   // Payment challenge. Do this before body validation so discovery clients receive 402.
   const paymentHeader = req.headers["x-payment"];
 
