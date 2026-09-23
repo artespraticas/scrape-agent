@@ -77,41 +77,43 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "url is required" });
   }
 
+  // Decode payment header
+  let parsedPayload;
   try {
-    let verifyRes;
-    try {
-      verifyRes = await fetch("https://x402.org/facilitator/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentPayload: paymentHeader,
-          paymentRequirements: challenge.accepts,
-        }),
-      });
-    } catch (fetchErr) {
-      return res.status(500).json({ error: "Facilitator unreachable", detail: String(fetchErr) });
-    }
+    parsedPayload = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
+  } catch {
+    return res.status(402).json({ ...challenge, error: "Invalid payment header encoding" });
+  }
+  const x402Version = parsedPayload.x402Version ?? 1;
 
-    if (!verifyRes.ok) {
-      const err = await verifyRes.json().catch(() => ({}));
-      return res.status(402).json({
-        ...challenge,
-        error: err.invalidReason || err.error || "Payment verification failed",
-      });
-    }
+  // Verify payment with facilitator
+  let verifyRes;
+  try {
+    verifyRes = await fetch("https://x402.org/facilitator/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x402Version,
+        paymentPayload: parsedPayload,
+        paymentRequirements: challenge.accepts,
+      }),
+    });
+  } catch (fetchErr) {
+    return res.status(500).json({ error: "Facilitator unreachable", detail: String(fetchErr) });
+  }
 
-    const verifyData = await verifyRes.json().catch(() => ({}));
-    if (!verifyData.isValid) {
-      return res.status(402).json({
-        ...challenge,
-        error: verifyData.invalidReason || "Payment invalid",
-      });
-    }
+  const verifyData = await verifyRes.json().catch(() => ({}));
+  if (!verifyRes.ok || !verifyData.isValid) {
+    return res.status(402).json({
+      ...challenge,
+      error: verifyData.invalidReason || verifyData.error || "Payment verification failed",
+    });
+  }
 
+  // Scrape the target URL
+  try {
     const response = await fetch(url, {
-      headers: {
-        "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)",
-      },
+      headers: { "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)" },
     });
     const html = await response.text();
 
@@ -125,29 +127,25 @@ export default async function handler(req, res) {
       result = matches.map((m) => m[1]);
     } else if (extract === "meta") {
       const title = html.match(/<title>([^<]*)<\/title>/)?.[1] || "";
-      const desc =
-        html.match(
-          /name=["']description["'][^>]*content=["']([^"']+)["']/i
-        )?.[1] || "";
+      const desc = html.match(/name=["']description["'][^>]*content=["']([^"']+)["']/i)?.[1] || "";
       result = { title, description: desc, url };
     } else {
       result = html;
     }
 
+    // Settle payment fire-and-forget
     fetch("https://x402.org/facilitator/settle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        paymentPayload: paymentHeader,
+        x402Version,
+        paymentPayload: parsedPayload,
         paymentRequirements: challenge.accepts,
       }),
     }).catch(() => {});
 
     return res.json({ url, extract, result, statusCode: response.status });
   } catch (err) {
-    return res.status(500).json({
-      error: "Scrape failed",
-      detail: err.message,
-    });
+    return res.status(500).json({ error: "Scrape failed", detail: err.message });
   }
 }
