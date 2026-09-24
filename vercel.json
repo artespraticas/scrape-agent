@@ -1,12 +1,12 @@
 {
   "rewrites": [
     { "source": "/api", "destination": "/api/index" },
-    { "source": "/((?!api|_next|assets|favicon|llms.txt|openapi.json|dashboard.html|\\.well-known).*)", "destination": "/index.html" }
+    { "source": "/app/((?!assets).*)", "destination": "/app/index.html" },
+    { "source": "/((?!api|app|_next|assets|favicon|llms.txt|openapi.json|dashboard.html|\\.well-known).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/scrape/x402.js": {
-      "maxDuration": 30
-    }
+    "api/scrape/x402.js": { "maxDuration": 30 },
+    "api/payments.js": { "maxDuration": 30 }
   },
   "headers": [
     {
