@@ -1,20 +1,14 @@
 {
   "rewrites": [
-    { "source": "/api", "destination": "/api/index" },
-    { "source": "/app/((?!assets).*)", "destination": "/app/index.html" },
-    { "source": "/((?!api|app|_next|assets|favicon|llms.txt|openapi.json|dashboard.html|\\.well-known).*)", "destination": "/index.html" }
+    { "source": "/api", "destination": "/api/index" }
   ],
-  "functions": {
-    "api/scrape/x402.js": { "maxDuration": 30 },
-    "api/payments.js": { "maxDuration": 30 }
-  },
   "headers": [
     {
       "source": "/api/scrape/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-PAYMENT" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-PAYMENT, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, PAYMENT-RESPONSE" }
       ]
     },
     {
