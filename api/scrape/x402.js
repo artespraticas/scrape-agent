@@ -1,221 +1,190 @@
-/**
- * Scrape Agent — x402 pay-per-use scraping endpoint
- *
- * Self-verifies EIP-712 TransferWithAuthorization signatures using viem.
- * Supports Base (eip155:8453), Arc Mainnet (eip155:5042), Polygon (eip155:137).
- */
+import { scrapeUrl, ScrapeSchema } from "../../lib/scraper.js";
 
-import express from 'express'
-import { recoverTypedDataAddress, getAddress } from 'viem'
+const WALLET = "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1";
+const FACILITATOR = "https://x402.org/facilitator";
 
-const SELLER = (process.env.SELLER_WALLET_ADDRESS ?? '').toLowerCase()
-
-// ── Chain registry ────────────────────────────────────────────────────────────
-// arc-studio-allow-onchain-literal
 const CHAINS = {
-  'eip155:8453': {
-    chainId: 8453,
-    usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    domain: { name: 'USD Coin', version: '2' },
+  "eip155:8453": {
+    name: "Base",
+    usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   },
-  'eip155:5042': {
-    chainId: 5042,
-    usdc: '0x3600000000000000000000000000000000000000',
-    domain: { name: 'USD Coin', version: '2' },
+  "eip155:5042": {
+    name: "Arc Mainnet",
+    usdc: "0x3600000000000000000000000000000000000000",
   },
+  "eip155:137": {
+    name: "Polygon",
+    usdc: "0x3c499c542cEF5E3811e1192ce70d8bC03d5c3359",
+  }
+};
 
-  'eip155:137': {
-    chainId: 137,
-    usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-    domain: { name: 'USD Coin', version: '2' },
-  },
-}
-
-const PAYMENT_REQUIREMENTS = Object.entries(CHAINS).map(([network, c]) => ({
-  scheme: 'exact',
+const ACCEPTS = Object.entries(CHAINS).map(([network, chain]) => ({
+  scheme: "exact",
   network,
-  amount: '10000',
-  maxAmountRequired: '10000',
+  amount: "10000",
+  asset: chain.usdc,
+  payTo: WALLET,
   maxTimeoutSeconds: 300,
-  asset: c.usdc,
-  payTo: process.env.SELLER_WALLET_ADDRESS ?? '',
   extra: {
-    name: c.domain.name,
-    version: c.domain.version,
-    assetTransferMethod: 'eip3009',
+    name: "USDC",
+    version: "2"
+  }
+}));
+
+const PAYMENT_REQUIRED_BODY = {
+  x402Version: 2,
+  error: "Payment required",
+  resource: {
+    url: "https://scrapeagent.xyz/api/scrape/x402",
+    description: "Pay-per-use web scraping — $0.01 per request",
+    mimeType: "application/json"
   },
-}))
+  accepts: ACCEPTS
+};
 
-// ── App ───────────────────────────────────────────────────────────────────────
-const app = express()
-app.use(express.json())
-
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-PAYMENT, PAYMENT-SIGNATURE')
-  if (req.method === 'OPTIONS') { res.status(204).end(); return }
-  next()
-})
-
-// ── Payment verification ──────────────────────────────────────────────────────
-async function verifyPayment(header) {
-  let payload
-  try {
-    payload = JSON.parse(Buffer.from(header, 'base64').toString('utf8'))
-  } catch {
-    return { ok: false, error: 'Invalid payment header encoding' }
+function encodeBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
+  return btoa(binary);
+}
 
-  const { scheme, network, payload: p } = payload
-  const chain = CHAINS[network]
-  if (!chain) return { ok: false, error: `Unsupported network: ${network}` }
-  if (scheme !== 'exact') return { ok: false, error: `Unsupported scheme: ${scheme}` }
+function cors() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-PAYMENT, X-PAYMENT-RESPONSE, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+  };
+}
 
-  const { signature, authorization: auth } = p ?? {}
-  if (!signature || !auth) return { ok: false, error: 'Missing signature or authorization' }
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...cors() },
+  });
+}
 
+function pay402(extraError = null) {
+  const body = {
+    ...PAYMENT_REQUIRED_BODY,
+    ...(extraError ? { error: extraError } : {})
+  };
+  const jsonStr = JSON.stringify(body);
+  const encoded = encodeBase64(jsonStr);
+  return new Response(jsonStr, {
+    status: 402,
+    headers: {
+      "Content-Type": "application/json",
+      "PAYMENT-REQUIRED": encoded,
+      ...cors()
+    },
+  });
+}
+
+async function verifyPayment(paymentHeader) {
   try {
-    const domain = {
-      name: chain.domain.name,
-      version: chain.domain.version,
-      chainId: chain.chainId,
-      verifyingContract: getAddress(chain.usdc),
-    }
-    const types = {
-      TransferWithAuthorization: [
-        { name: 'from',        type: 'address' },
-        { name: 'to',          type: 'address' },
-        { name: 'value',       type: 'uint256' },
-        { name: 'validAfter',  type: 'uint256' },
-        { name: 'validBefore', type: 'uint256' },
-        { name: 'nonce',       type: 'bytes32' },
-      ],
-    }
-    const message = {
-      from:        getAddress(auth.from),
-      to:          getAddress(auth.to),
-      value:       BigInt(auth.value),
-      validAfter:  BigInt(auth.validAfter),
-      validBefore: BigInt(auth.validBefore),
-      nonce:       auth.nonce,
-    }
-
-    const now = BigInt(Math.floor(Date.now() / 1000))
-    if (now < message.validAfter)  return { ok: false, error: 'Payment not yet valid' }
-    if (now > message.validBefore) return { ok: false, error: 'Payment expired' }
-    if (BigInt(auth.value) < 10000n) return { ok: false, error: 'Insufficient payment amount' }
-    if (auth.to.toLowerCase() !== SELLER) return { ok: false, error: 'Wrong payment recipient' }
-
-    const recovered = await recoverTypedDataAddress({ domain, types, primaryType: 'TransferWithAuthorization', message, signature })
-    if (recovered.toLowerCase() !== auth.from.toLowerCase()) {
-      return { ok: false, error: 'Signature mismatch' }
-    }
-
-    return { ok: true, from: auth.from, network, amount: auth.value }
+    const response = await fetch(`${FACILITATOR}/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x402Version: 2,
+        payload: paymentHeader,
+        resource: {
+          url: "https://scrapeagent.xyz/api/scrape/x402",
+          description: "Pay-per-use web scraping — $0.01 per request",
+          mimeType: "application/json"
+        },
+        accepts: ACCEPTS
+      })
+    });
+    if (!response.ok) return { valid: false };
+    const data = await response.json();
+    return { valid: data.isValid === true, data };
   } catch (err) {
-    return { ok: false, error: err?.message ?? String(err) }
+    return { valid: false, error: err.message };
   }
 }
 
-// ── HTML helpers ─────────────────────────────────────────────────────────────
-function extractContent(html, mode, url) {
-  const title = (html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? '').trim()
-
-  if (mode === 'html') return { title, content: html.slice(0, 50_000) }
-
-  if (mode === 'links') {
-    const links = []
-    const re = /href=["']([^"']+)["']/gi
-    let m
-    while ((m = re.exec(html)) !== null) {
-      try { links.push(new URL(m[1], url).href) } catch { /* skip */ }
-    }
-    return { title, links: [...new Set(links)].slice(0, 200) }
+async function settlePayment(paymentHeader) {
+  try {
+    const response = await fetch(`${FACILITATOR}/settle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x402Version: 2,
+        payload: paymentHeader,
+        resource: {
+          url: "https://scrapeagent.xyz/api/scrape/x402",
+          description: "Pay-per-use web scraping — $0.01 per request",
+          mimeType: "application/json"
+        },
+        accepts: ACCEPTS
+      })
+    });
+    if (!response.ok) return { success: false };
+    const data = await response.json();
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
-
-  if (mode === 'meta') {
-    const meta = {}
-    const re = /<meta\s+(?:[^>]*?\s+)?(?:name|property)=["']([^"']+)["'][^>]*?\s+content=["']([^"']+)["'][^>]*?>/gi
-    let m
-    while ((m = re.exec(html)) !== null) meta[m[1]] = m[2]
-    return { title, meta }
-  }
-
-  const clean = html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 20_000)
-  return { title, content: clean, wordCount: clean.split(/\s+/).filter(Boolean).length }
 }
 
-// ── Route ─────────────────────────────────────────────────────────────────────
-app.post('*', async (req, res) => {
-  const paymentHeader = req.headers['x-payment'] ?? req.headers['payment-signature']
+export default async function handler(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: cors() });
+  }
+
+  if (req.method === "GET") {
+    return pay402();
+  }
+
+  if (req.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  const paymentHeader =
+    req.headers.get("PAYMENT-SIGNATURE") ||
+    req.headers.get("X-PAYMENT");
 
   if (!paymentHeader) {
-    return res.status(402).json({
-      x402Version: 2,
-      error: 'Payment required',
-      resource: {
-        url: 'https://scrapeagent.xyz/api/scrape/x402',
-        description: 'Pay-per-use web scraping — $0.01 per request',
-        mimeType: 'application/json',
-      },
-      accepts: PAYMENT_REQUIREMENTS,
-    })
+    return pay402();
   }
 
-  const verification = await verifyPayment(paymentHeader)
-  if (!verification.ok) {
-    return res.status(402).json({
-      x402Version: 2,
-      error: verification.error,
-      resource: {
-        url: 'https://scrapeagent.xyz/api/scrape/x402',
-        description: 'Pay-per-use web scraping — $0.01 per request',
-        mimeType: 'application/json',
-      },
-      accepts: PAYMENT_REQUIREMENTS,
-    })
+  const verification = await verifyPayment(paymentHeader);
+  if (!verification.valid) {
+    return pay402("Payment verification failed — please retry with a valid payment");
   }
 
-  const { url, extract = 'text', timeout = 8000 } = req.body ?? {}
-
-  if (!url || !/^https?:\/\/.+/.test(url)) {
-    return res.status(400).json({ error: 'Invalid or missing url' })
+  const settlement = await settlePayment(paymentHeader);
+  if (!settlement.success) {
+    return pay402("Payment settlement failed — please retry");
   }
 
-  const ms = Math.min(Math.max(Number(timeout) || 8000, 1000), 15000)
-  const start = Date.now()
-
+  let body;
   try {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), ms)
-    const resp = await fetch(url, {
-      headers: { 'User-Agent': 'ScrapeAgent/2.0 (+https://scrapeagent.xyz)' },
-      signal: ctrl.signal,
-    }).finally(() => clearTimeout(timer))
-
-    const html = await resp.text()
-    const extracted = extractContent(html, extract, url)
-
-    return res.json({
-      protocol: 'x402',
-      version: 2,
-      priceUSD: '0.01',
-      url,
-      extract,
-      status: 'ok',
-      elapsed: Date.now() - start,
-      ...extracted,
-    })
-  } catch (err) {
-    return res.status(500).json({ error: 'Scrape failed', detail: err?.message ?? String(err) })
+    body = await req.json();
+  } catch {
+    return json({ error: "Invalid JSON body" }, 400);
   }
-})
 
-export default app
+  const parsed = ScrapeSchema.safeParse(body);
+  if (!parsed.success) {
+    return json({ error: "Validation failed", issues: parsed.error.flatten() }, 422);
+  }
+
+  const result = await scrapeUrl(parsed.data);
+  return json({
+    protocol: "x402",
+    version: 2,
+    priceUSD: "0.01",
+    networks: Object.keys(CHAINS),
+    settled: true,
+    ...result
+  });
+}
+
+export const config = {
+  runtime: "edge",
+};
