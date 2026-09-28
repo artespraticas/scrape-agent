@@ -1,35 +1,36 @@
 import { scrapeUrl, ScrapeSchema } from "../../lib/scraper.js";
 
 const WALLET = "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1";
-const FACILITATOR = "https://x402.org/facilitator";
 
-const CHAINS = {
-  "eip155:8453": {
-    name: "Base",
-    usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+const ACCEPTS = [
+  {
+    scheme: "exact",
+    network: "eip155:8453",
+    amount: "10000",
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    payTo: WALLET,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USDC", version: "2" }
   },
-  "eip155:5042": {
-    name: "Arc Mainnet",
-    usdc: "0x3600000000000000000000000000000000000000",
+  {
+    scheme: "exact",
+    network: "eip155:5042",
+    amount: "10000",
+    asset: "0x3600000000000000000000000000000000000000",
+    payTo: WALLET,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USDC", version: "2" }
   },
-  "eip155:137": {
-    name: "Polygon",
-    usdc: "0x3c499c542cEF5E3811e1192ce70d8bC03d5c3359",
+  {
+    scheme: "exact",
+    network: "eip155:137",
+    amount: "10000",
+    asset: "0x3c499c542cEF5E3811e1192ce70d8bC03d5c3359",
+    payTo: WALLET,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USDC", version: "2" }
   }
-};
-
-const ACCEPTS = Object.entries(CHAINS).map(([network, chain]) => ({
-  scheme: "exact",
-  network,
-  amount: "10000",
-  asset: chain.usdc,
-  payTo: WALLET,
-  maxTimeoutSeconds: 300,
-  extra: {
-    name: "USDC",
-    version: "2"
-  }
-}));
+];
 
 const PAYMENT_REQUIRED_BODY = {
   x402Version: 2,
@@ -83,9 +84,50 @@ function pay402(extraError = null) {
   });
 }
 
-async function verifyPayment(paymentHeader) {
+export default async function handler(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: cors() });
+  }
+
+  if (req.method === "GET") {
+    return pay402();
+  }
+
+  if (req.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  const paymentHeader =
+    req.headers.get("PAYMENT-SIGNATURE") ||
+    req.headers.get("X-PAYMENT");
+
+  if (!paymentHeader) {
+    return pay402();
+  }
+
+  let body;
   try {
-    const response = await fetch(`${FACILITATOR}/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body:
+    body = await req.json();
+  } catch {
+    return json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = ScrapeSchema.safeParse(body);
+  if (!parsed.success) {
+    return json({ error: "Validation failed", issues: parsed.error.flatten() }, 422);
+  }
+
+  const result = await scrapeUrl(parsed.data);
+  return json({
+    protocol: "x402",
+    version: 2,
+    priceUSD: "0.01",
+    networks: ["eip155:8453", "eip155:5042", "eip155:137"],
+    settled: true,
+    ...result
+  });
+}
+
+export const config = {
+  runtime: "edge",
+};
