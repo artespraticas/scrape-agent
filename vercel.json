@@ -1,14 +1,12 @@
 {
   "rewrites": [
-    { "source": "/api", "destination": "/api/index" }
+    { "source": "/(.*)", "destination": "/api/server" }
   ],
   "headers": [
     {
-      "source": "/api/scrape/(.*)",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-PAYMENT, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, PAYMENT-RESPONSE" }
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
       ]
     },
     {
