@@ -1,14 +1,8 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/server" }
+    { "source": "/api", "destination": "/api/index" }
   ],
   "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
-      ]
-    },
     {
       "source": "/.well-known/x402",
       "headers": [
