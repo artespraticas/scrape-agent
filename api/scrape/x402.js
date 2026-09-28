@@ -1,7 +1,7 @@
 import { scrapeUrl, ScrapeSchema } from "../../lib/scraper.js";
 
 const WALLET = "0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1";
-const FACILITATOR = "https://api.cdp.coinbase.com/platform/v2/x402";
+const FACILITATOR = "https://x402.org/facilitator";
 
 const CHAINS = {
   "eip155:8453": {
