@@ -2,64 +2,22 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Scrape Agent",
-    "version": "2.0.0",
-    "description": "Pay-per-use web scraping API for AI agents. Extract clean text, links, HTML or metadata from any public URL for $0.01 USD, paid in USDC via x402.",
+    "version": "1.0.0",
+    "description": "Pay-per-use web scraping API built on x402",
+    "x-guidance": "Use POST /api/scrape/x402 to scrape any public URL. Send JSON body with 'url' (required) and optional 'extract' field (text|html|links|meta|full). Pay $0.01 USDC on Base, Arc, or Polygon via x402. No API key needed.",
     "contact": {
-      "name": "Scrape Agent",
-      "email": "artespraticas@gmail.com",
-      "url": "https://scrapeagent.xyz"
-    },
-    "x-guidance": "Use POST /api/scrape/x402 with a JSON body containing a public URL and an extract type. The endpoint costs $0.01 per request and uses x402 payment in USDC on Base, Arc, or Polygon. No API key or account is required. Start by calling the endpoint without payment to receive the HTTP 402 payment challenge, then retry with a valid x402 payment. Input: url (required string), extract (text|html|links|meta, default text). Output: JSON containing url, extract, result, and statusCode."
-  },
-  "externalDocs": {
-    "description": "Full documentation and integration guides",
-    "url": "https://scrapeagent.xyz"
-  },
-  "servers": [
-    {
-      "url": "https://scrapeagent.xyz",
-      "description": "Production"
+      "email": "artespraticas@gmail.com"
     }
-  ],
+  },
   "paths": {
     "/api/scrape/x402": {
       "post": {
         "operationId": "scrapeUrl",
-        "summary": "Scrape any public URL and return clean content",
-        "description": "Extract text, links, HTML or metadata from any public URL. Requires $0.01 USD payment in USDC via x402 on Base, Arc, or Polygon. An unpaid request returns HTTP 402 with payment requirements before request-body validation.",
+        "summary": "Scrape a URL - Extract content from any public webpage",
+        "tags": ["Scraping"],
         "x-payment-info": {
-          "price": {
-            "mode": "fixed",
-            "currency": "USD",
-            "amount": "0.010000"
-          },
-          "protocols": [
-            { "x402": {} },
-            { "mpp": { "method": "POST", "intent": "scrape", "currency": "USD" } }
-          ]
-        },
-        "x-bazaar": {
-          "schema": {
-            "properties": {
-              "input": {
-                "type": "object",
-                "required": ["url"],
-                "properties": {
-                  "url": { "type": "string", "format": "uri", "description": "Public URL to scrape" },
-                  "extract": { "type": "string", "enum": ["text","html","links","meta"], "default": "text" }
-                }
-              },
-              "output": {
-                "type": "object",
-                "properties": {
-                  "url": { "type": "string" },
-                  "extract": { "type": "string" },
-                  "result": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }, { "type": "object" }] },
-                  "statusCode": { "type": "integer" }
-                }
-              }
-            }
-          }
+          "price": { "mode": "fixed", "currency": "USD", "amount": "0.010000" },
+          "protocols": [{ "x402": {} }]
         },
         "requestBody": {
           "required": true,
@@ -67,32 +25,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "The public URL to scrape",
-                    "example": "https://example.com"
-                  },
-                  "extract": {
-                    "type": "string",
-                    "enum": [
-                      "text",
-                      "html",
-                      "links",
-                      "meta"
-                    ],
-                    "default": "text",
-                    "description": "What to extract: text (clean readable text), html (raw HTML), links (all href URLs), or meta (title and description)"
-                  }
-                },
-                "example": {
-                  "url": "https://example.com",
-                  "extract": "text"
+                  "url": { "type": "string", "format": "uri", "minLength": 1, "description": "The URL to scrape" },
+                  "extract": { "type": "string", "enum": ["text", "html", "links", "meta", "full"], "default": "text", "description": "What to extract" },
+                  "timeout": { "type": "number", "minimum": 1000, "maximum": 15000, "default": 8000, "description": "Timeout in milliseconds" }
                 }
               }
             }
@@ -100,81 +37,25 @@
         },
         "responses": {
           "200": {
-            "description": "Successful scrape",
+            "description": "Scrape successful",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "url",
-                    "extract",
-                    "result",
-                    "statusCode"
-                  ],
+                  "required": ["url", "status"],
                   "properties": {
-                    "url": {
-                      "type": "string"
-                    },
-                    "extract": {
-                      "type": "string",
-                      "enum": [
-                        "text",
-                        "html",
-                        "links",
-                        "meta"
-                      ]
-                    },
-                    "result": {
-                      "oneOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        {
-                          "type": "object"
-                        }
-                      ]
-                    },
-                    "statusCode": {
-                      "type": "integer"
-                    }
+                    "url": { "type": "string" },
+                    "status": { "type": "string" },
+                    "title": { "type": "string" },
+                    "content": { "type": "string" },
+                    "wordCount": { "type": "number" },
+                    "elapsed": { "type": "number" }
                   }
-                },
-                "example": {
-                  "url": "https://example.com",
-                  "extract": "text",
-                  "result": "Example Domain. This domain is for use in illustrative examples.",
-                  "statusCode": 200
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad request — url field is required"
-          },
-          "402": {
-            "description": "Payment required. The response contains x402 payment requirements for the supported USDC payment networks."
-          },
-          "500": {
-            "description": "Scrape failed — target URL may be unavailable"
-          }
-        }
-      },
-      "get": {
-        "operationId": "scrapeUrlChallenge",
-        "summary": "Return the x402 payment challenge",
-        "description": "Returns the x402 payment requirements without charging. Use POST with valid payment to scrape a URL.",
-        "security": [],
-        "x-auth-mode": "none",
-        "responses": {
-          "402": {
-            "description": "Payment required — inspect the response payment requirements."
-          }
+          "402": { "description": "Payment Required — send 0.01 USDC on Base/Arc/Polygon via x402" }
         }
       }
     }
