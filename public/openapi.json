@@ -6,8 +6,12 @@
     "description": "Pay-per-use web scraping API built on x402",
     "x-guidance": "Use POST /api/scrape/x402 to scrape any public URL. Send JSON body with 'url' (required) and optional 'extract' field (text|html|links|meta|full). Pay $0.01 USDC on Base, Arc, or Polygon via x402. No API key needed.",
     "contact": {
-      "email": "artespraticas@gmail.com"
-    }
+  "email": "artespraticas@gmail.com"
+},
+"externalDocs": {
+  "description": "API Documentation and examples",
+  "url": "https://scrapeagent.xyz"
+}
   },
   "paths": {
     "/api/scrape/x402": {
