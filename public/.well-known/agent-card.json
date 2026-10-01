@@ -1,0 +1,22 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Scrape Agent",
+  "description": "Pay-per-use web scraping API. Extract clean text, links or HTML from any URL for $0.01 USDC on Base via x402 protocol.",
+  "image": "https://scrapeagent.xyz/favicon.ico",
+  "services": [
+    {
+      "name": "x402",
+      "endpoint": "https://scrapeagent.xyz/api/scrape/x402"
+    },
+    {
+      "name": "web",
+      "endpoint": "https://scrapeagent.xyz"
+    },
+    {
+      "name": "openapi",
+      "endpoint": "https://scrapeagent.xyz/openapi.json"
+    }
+  ],
+  "x402Support": true,
+  "active": true
+}

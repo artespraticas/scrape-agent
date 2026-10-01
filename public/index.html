@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrape Agent — Pay-Per-Use Web Scraping API</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; line-height: 1.6; }
+    .hero { padding: 60px 20px; text-align: center; border-bottom: 1px solid #222; }
+    .hero h1 { font-size: 2.5rem; font-weight: 700; color: #fff; margin-bottom: 12px; }
+    .hero p { font-size: 1.2rem; color: #888; max-width: 500px; margin: 0 auto 24px; }
+    .badge { display: inline-block; background: #1a3a2a; color: #4ade80; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin: 4px; }
+    .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+    .section { margin-bottom: 48px; }
+    .section h2 { font-size: 1.3rem; color: #fff; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222; }
+    .card { background: #111; border: 1px solid #222; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
+    .card h3 { color: #4ade80; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    pre { background: #0d0d0d; border: 1px solid #222; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 0.85rem; color: #a0a0a0; margin: 8px 0; }
+    .highlight { color: #4ade80; }
+    .price { font-size: 2rem; font-weight: 700; color: #4ade80; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 1.8rem; } }
+    .wallet { font-family: monospace; font-size: 0.8rem; color: #666; word-break: break-all; }
+    a { color: #4ade80; text-decoration: none; }
+    .chain-pill { display: inline-block; background: #0f1f17; border: 1px solid #2a5a3a; color: #4ade80; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin: 2px; }
+
+    /* ── Human UI embed ─────────────────────────────────────────── */
+    .human-banner {
+      background: linear-gradient(135deg, #0f2a1a 0%, #0a1a10 100%);
+      border: 1px solid #2a5a3a;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+    .human-banner h2 { font-size: 1.1rem; color: #4ade80; margin-bottom: 8px; }
+    .human-banner p { color: #888; font-size: 0.9rem; margin-bottom: 16px; }
+    .try-btn {
+      display: inline-block;
+      background: #4ade80;
+      color: #0a0a0a;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 10px 28px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .try-btn:hover { opacity: 0.85; color: #0a0a0a; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🕷️ Scrape Agent</h1>
+  <p>Pay-per-use web scraping API for AI agents. No subscription, no API key.</p>
+  <span class="badge">x402 Protocol</span>
+  <span class="badge">Base · Arc · Polygon</span>
+  <span class="badge">USDC Payments</span>
+  <span class="badge">100/100 Circle Score</span>
+</div>
+
+<div class="container">
+
+  <!-- ── Human wallet UI ── -->
+  <div class="human-banner">
+    <h2>👤 Are you a human? Try it in your browser</h2>
+    <p>Connect your wallet and scrape any public URL for $0.01 USDC — no API key needed.</p>
+    <a href="/app" class="try-btn">Open web app →</a>
+  </div>
+
+  <div class="section">
+    <h2>Pricing</h2>
+    <div class="card">
+      <div class="price">$0.01 USDC</div>
+      <p style="color:#888; margin-top:8px;">Per request — pay only for what you use. Payments go directly to the provider wallet.</p>
+      <p style="color:#888; margin-top:8px;">Accepted on:
+        <span class="chain-pill">⬡ Base (eip155:8453)</span>
+        <span class="chain-pill">◈ Arc (eip155:5042)</span>
+        <span class="chain-pill">⬟ Polygon (eip155:137)</span>
+      </p>
+      <p class="wallet" style="margin-top:12px;">Payment address: 0x0d4897bf4222deddf8a5b31fa7d8021c369f40d1</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Endpoint</h2>
+    <div class="card">
+      <h3>POST /api/scrape/x402</h3>
+      <p style="color:#888; margin-bottom:12px;">Scrape any public URL and return clean text, links, or HTML.</p>
+      <pre><span class="highlight">POST</span> https://scrapeagent.xyz/api/scrape/x402
+Content-Type: application/json
+X-PAYMENT: &lt;x402-payment-proof&gt;
+
+{
+  "url": "https://example.com",
+  "extract": "text"
+}</pre>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Request Parameters</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>url <span style="color:#e55">required</span></h3>
+        <p style="color:#888;">Any public URL to scrape. Must be a valid http/https URL.</p>
+      </div>
+      <div class="card">
+        <h3>extract <span style="color:#666">optional</span></h3>
+        <p style="color:#888;">What to extract: <code>text</code> (default), <code>html</code>, <code>links</code>, <code>meta</code>, <code>full</code></p>
+      </div>
+      <div class="card">
+        <h3>timeout <span style="color:#666">optional</span></h3>
+        <p style="color:#888;">Timeout in milliseconds. Min 1000, max 15000. Default 8000.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Example Response</h2>
+    <pre>{
+  "protocol": "x402",
+  "version": 2,
+  "priceUSD": "0.01",
+  "url": "https://example.com",
+  "status": "ok",
+  "title": "Example Domain",
+  "content": "This domain is for use in illustrative examples...",
+  "wordCount": 42,
+  "elapsed": 312
+}</pre>
+  </div>
+
+  <div class="section">
+    <h2>How It Works</h2>
+    <div class="card">
+      <h3>1. Call the endpoint</h3>
+      <p style="color:#888;">Send a POST request without payment — receive a 402 response with payment instructions.</p>
+    </div>
+    <div class="card">
+      <h3>2. Pay $0.01 USDC on Base, Arc or Polygon</h3>
+      <p style="color:#888;">Use any x402-compatible client. The Circle CLI handles payment automatically on any supported chain.</p>
+    </div>
+    <div class="card">
+      <h3>3. Retry with payment proof</h3>
+      <p style="color:#888;">Include the X-PAYMENT header and receive the scraped content instantly.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Try It Now (CLI)</h2>
+    <pre>npm install -g @circle-fin/cli
+circle wallet login --type agent --init
+circle services pay "https://scrapeagent.xyz/api/scrape/x402" \
+  -X POST \
+  --data '{"url":"https://example.com","extract":"text"}'</pre>
+  </div>
+
+  <div class="section">
+    <h2>Discovery</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>OpenAPI Spec</h3>
+        <a href="/openapi.json">/openapi.json</a>
+      </div>
+      <div class="card">
+        <h3>Well-Known</h3>
+        <a href="/.well-known/x402">/.well-known/x402</a>
+      </div>
+      <div class="card">
+        <h3>Agent Discovery</h3>
+        <a href="/llms.txt">/llms.txt</a>
+      </div>
+      <div class="card">
+        <h3>Networks</h3>
+        <p style="margin-top:4px;">
+          <span class="chain-pill">⬡ Base (eip155:8453)</span><br>
+          <span class="chain-pill" style="margin-top:6px; display:inline-block;">◈ Arc (eip155:5042)</span><br>
+          <span class="chain-pill" style="margin-top:6px; display:inline-block;">⬟ Polygon (eip155:137)</span>
+        </p>
+      </div>
+      <div class="card">
+        <h3>Circle Score</h3>
+        <a href="https://agents.circle.com/sell/score?url=scrapeagent.xyz" target="_blank">
+          <span style="font-size:1.8rem; font-weight:700; color:#4ade80;">100</span>
+          <span style="color:#888; font-size:0.85rem;">/100 · Runtime-verified</span>
+        </a>
+      </div>
+      <div class="card">
+        <h3>MCP Server</h3>
+        <a href="https://smithery.ai/servers/artespraticas/scrape-agent-mcp">
+          <img src="https://smithery.ai/badge/artespraticas/scrape-agent-mcp"
+               alt="smithery badge" style="height:32px; margin-top:4px;">
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

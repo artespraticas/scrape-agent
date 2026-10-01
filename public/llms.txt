@@ -1,34 +1,48 @@
-# ScrapeAgent API — llms.txt
+# Scrape Agent — llms.txt
 
 > Pay-per-use web scraping for AI agents.
-> $0.01 per URL in USDC on Base chain via x402.
-> No accounts. No subscriptions. Pay per request.
+> $0.01 USD per request, paid in USDC via x402.
+> No accounts. No subscriptions. No API key.
 
 ## Endpoint
 
-POST /api/scrape/x402
+POST https://scrapeagent.xyz/api/scrape/x402
 
 ## Payment
 
-Protocol: x402 (Coinbase/Base)
-Asset: USDC on Base
+Protocol: x402
+Asset: USDC
 Price: $0.01 per request
-Wallet: See X-PAYMENT response
+Supported networks: Base (eip155:8453), Arc (eip155:5042), Polygon (eip155:137)
+Payment destination: provided in the x402 payment challenge
 
 ## Request format
 
 {
   "url": "https://example.com",
-  "extract": "text | html | links | meta | full"
+  "extract": "text | html | links | meta"
 }
 
-## How to pay (for agents)
+extract defaults to text.
 
-1. npm install @x402/fetch
-2. import { withPaymentInterceptor } from '@x402/fetch'
-3. const fetchWithPayment = withPaymentInterceptor(fetch, account)
-4. Call /api/scrape/x402 normally — 402 handled automatically
+## How agents should call it
+
+1. POST the JSON request without payment.
+2. Receive HTTP 402 with the x402 payment requirements.
+3. Pay exactly $0.01 USDC using a compatible x402 client.
+4. Retry the same POST request with the payment proof.
+5. Receive the scraped JSON response.
+
+## Response format
+
+{
+  "url": "https://example.com",
+  "extract": "text",
+  "result": "Example Domain...",
+  "statusCode": 200
+}
 
 ## Discovery
 
-Full API spec (free): GET /api
+OpenAPI: GET https://scrapeagent.xyz/openapi.json
+x402 discovery: GET https://scrapeagent.xyz/.well-known/x402
