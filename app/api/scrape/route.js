@@ -1,14 +1,22 @@
 import { z } from 'zod';
 import { router } from '@/lib/router';
 
-const ScrapeSchema = z.object({
+const InputSchema = z.object({
   url: z.string().url().describe('The URL to scrape'),
+});
+
+const OutputSchema = z.object({
+  url: z.string().describe('The scraped URL'),
+  text: z.string().describe('Clean text content stripped of HTML'),
+  length: z.number().describe('Character count of returned text'),
+  scraped_at: z.string().describe('Timestamp of scrape'),
 });
 
 export const GET = router
   .route({ path: 'scrape' })
   .paid('0.01')
-  .query(ScrapeSchema)
+  .query(InputSchema)
+  .output(OutputSchema)
   .inputExample({ url: 'https://example.com' })
   .description('Scrape any public URL and return clean text, stripped of HTML, scripts and styles.')
   .handler(async ({ query }) => {
