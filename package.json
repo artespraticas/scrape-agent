@@ -15,5 +15,10 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "@types/react": "^19.3.0",
+    "typescript": "^5.8.2"
   }
 }
