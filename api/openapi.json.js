@@ -20,7 +20,10 @@ export default function handler(req, res) {
           tags: ['Scraping'],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: { method: '', intent: '', currency: '' } }]
+            protocols: [
+              { x402: {} },
+              { mpp: { method: 'transfer', intent: 'pay', currency: '0x20c000000000000000000000b9537d11c60e8b50' } }
+            ]
           },
           requestBody: {
             required: true,
@@ -31,7 +34,8 @@ export default function handler(req, res) {
                   required: ['url'],
                   properties: {
                     url: { type: 'string', format: 'uri', description: 'The URL to scrape' }
-                  }
+                  },
+                  example: { url: 'https://example.com' }
                 }
               }
             }
@@ -45,10 +49,10 @@ export default function handler(req, res) {
                     type: 'object',
                     required: ['url', 'text', 'length', 'scraped_at'],
                     properties: {
-                      url: { type: 'string' },
-                      text: { type: 'string' },
-                      length: { type: 'number' },
-                      scraped_at: { type: 'string', format: 'date-time' }
+                      url: { type: 'string', description: 'The scraped URL' },
+                      text: { type: 'string', description: 'Clean text content stripped of HTML' },
+                      length: { type: 'number', description: 'Character count of returned text' },
+                      scraped_at: { type: 'string', format: 'date-time', description: 'Timestamp of scrape' }
                     }
                   }
                 }
