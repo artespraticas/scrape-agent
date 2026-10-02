@@ -7,11 +7,8 @@ export default function handler(req, res) {
       title: 'ScrapeAgent',
       version: '1.0.0',
       description: 'Pay-per-use web scraping API for AI agents.',
-      'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string }. Pay $0.01 USDC via x402 or MPP. No API key needed.',
-      contact: { email: 'artespraticas@gmail.com' },
-      externalDocs: { url: 'https://scrapeagent.xyz/llms.txt' }
+      'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string }. Pay $0.01 USDC via x402 or MPP. No API key needed.'
     },
-    servers: [{ url: 'https://scrapeagent.xyz' }],
     paths: {
       '/api/scrape/x402': {
         post: {
@@ -22,35 +19,8 @@ export default function handler(req, res) {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
             protocols: [
               { x402: {} },
-              { mpp: { method: 'transfer', intent: 'pay', currency: '0x20c000000000000000000000b9537d11c60e8b50' } }
+              { mpp: { method: '', intent: '', currency: '' } }
             ]
-          },
-          extensions: {
-            bazaar: {
-              schema: {
-                '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                properties: {
-                  input: {
-                    type: 'object',
-                    required: ['url'],
-                    properties: {
-                      url: { type: 'string', format: 'uri', description: 'The URL to scrape' }
-                    }
-                  },
-                  output: {
-                    type: 'object',
-                    required: ['url', 'text', 'length', 'scraped_at'],
-                    properties: {
-                      url: { type: 'string' },
-                      text: { type: 'string' },
-                      length: { type: 'number' },
-                      scraped_at: { type: 'string', format: 'date-time' }
-                    }
-                  }
-                },
-                required: ['input']
-              }
-            }
           },
           requestBody: {
             required: true,
@@ -60,9 +30,8 @@ export default function handler(req, res) {
                   type: 'object',
                   required: ['url'],
                   properties: {
-                    url: { type: 'string', format: 'uri', description: 'The URL to scrape' }
-                  },
-                  example: { url: 'https://example.com' }
+                    url: { type: 'string', minLength: 1, description: 'The URL to scrape' }
+                  }
                 }
               }
             }
@@ -79,15 +48,13 @@ export default function handler(req, res) {
                       url: { type: 'string' },
                       text: { type: 'string' },
                       length: { type: 'number' },
-                      scraped_at: { type: 'string', format: 'date-time' }
+                      scraped_at: { type: 'string' }
                     }
                   }
                 }
               }
             },
-            '402': { description: 'Payment Required — $0.01 USDC via x402 or MPP' },
-            '400': { description: 'Missing url parameter' },
-            '500': { description: 'Scrape failed' }
+            '402': { description: 'Payment Required' }
           }
         }
       }
