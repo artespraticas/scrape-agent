@@ -25,6 +25,31 @@ export default function handler(req, res) {
               { mpp: { method: 'transfer', intent: 'pay', currency: '0x20c000000000000000000000b9537d11c60e8b50' } }
             ]
           },
+          'x-agentcash': {
+            schema: {
+              '$schema': 'https://json-schema.org/draft/2020-12/schema',
+              properties: {
+                input: {
+                  type: 'object',
+                  required: ['url'],
+                  properties: {
+                    url: { type: 'string', format: 'uri', description: 'The URL to scrape' }
+                  }
+                },
+                output: {
+                  type: 'object',
+                  required: ['url', 'text', 'length', 'scraped_at'],
+                  properties: {
+                    url: { type: 'string' },
+                    text: { type: 'string' },
+                    length: { type: 'number' },
+                    scraped_at: { type: 'string', format: 'date-time' }
+                  }
+                }
+              },
+              required: ['input']
+            }
+          },
           requestBody: {
             required: true,
             content: {
@@ -49,10 +74,10 @@ export default function handler(req, res) {
                     type: 'object',
                     required: ['url', 'text', 'length', 'scraped_at'],
                     properties: {
-                      url: { type: 'string', description: 'The scraped URL' },
-                      text: { type: 'string', description: 'Clean text content stripped of HTML' },
-                      length: { type: 'number', description: 'Character count of returned text' },
-                      scraped_at: { type: 'string', format: 'date-time', description: 'Timestamp of scrape' }
+                      url: { type: 'string' },
+                      text: { type: 'string' },
+                      length: { type: 'number' },
+                      scraped_at: { type: 'string', format: 'date-time' }
                     }
                   }
                 }
