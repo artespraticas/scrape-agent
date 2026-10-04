@@ -19,3 +19,4 @@ export default async function handler(req, res) {
     const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<style[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,10000);
     return res.status(200).json({ url, text, length: text.length, scraped_at: new Date().toISOString() });
   } catch(err) { return res.status(500).json({ error: "Scrape failed", detail: err.message }); }
+}
