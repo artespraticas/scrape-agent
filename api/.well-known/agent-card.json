@@ -6,7 +6,7 @@
   "services": [
     {
       "name": "x402",
-      "endpoint": "https://scrapeagent.xyz/api/scrape/x402"
+      "endpoint": "https://api.scrapeagent.xyz/api/scrape/x402"
     },
     {
       "name": "web",
