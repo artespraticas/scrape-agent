@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(url, { headers: { "User-Agent": "ScrapeAgent/1.0" }, signal: AbortSignal.timeout(8000) });
     const html = await r.text();
-    const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<style[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,10000);
+    const text = html.replace(/<script[^>]*>[sS]*?<\/script>/gi,"").replace(/<style[^>]*>[sS]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,10000);
     return res.status(200).json({ url, text, length: text.length, scraped_at: new Date().toISOString() });
   } catch(err) { return res.status(500).json({ error: "Scrape failed", detail: err.message }); }
 }
