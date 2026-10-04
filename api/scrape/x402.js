@@ -9,7 +9,8 @@ const accepts = [
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const payment = req.headers["x-payment"];
-  if (!payment) return res.status(402).json({ x402Version: 2, error: "Payment required", resource: { url: "https://api.scrapeagent.xyz/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
+  const host = req.headers.host || "api.scrapeagent.xyz";
+  if (!payment) return res.status(402).json({ x402Version: 2, error: "Payment required", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
   const body = req.method === "POST" ? req.body : null;
   const url = (body && body.url) || req.query.url;
   if (!url) return res.status(400).json({ error: "Missing url" });
