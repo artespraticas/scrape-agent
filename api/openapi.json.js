@@ -1,3 +1,4 @@
+      }
 export default function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7,8 +8,11 @@ export default function handler(req, res) {
       title: 'ScrapeAgent',
       version: '1.0.0',
       description: 'Pay-per-use web scraping API for AI agents.',
-      'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string }. Pay $0.01 USDC via x402 or MPP. No API key needed.'
+      'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string }. Pay $0.01 USDC via x402 or MPP. No API key needed.',
+      contact: { email: 'artespraticas@gmail.com', url: 'https://scrapeagent.xyz' },
+      externalDocs: { url: 'https://scrapeagent.xyz/llms.txt', description: 'Agent usage guide' }
     },
+    servers: [{ url: 'https://scrapeagent.xyz' }],
     paths: {
       '/api/scrape/x402': {
         post: {
@@ -17,10 +21,7 @@ export default function handler(req, res) {
           tags: ['Scraping'],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [
-              { x402: {} },
-              { mpp: { method: '', intent: '', currency: '' } }
-            ]
+            protocols: [{ x402: {} }]
           },
           requestBody: {
             required: true,
@@ -30,8 +31,9 @@ export default function handler(req, res) {
                   type: 'object',
                   required: ['url'],
                   properties: {
-                    url: { type: 'string', minLength: 1, description: 'The URL to scrape' }
-                  }
+                    url: { type: 'string', format: 'uri', description: 'The URL to scrape' }
+                  },
+                  example: { url: 'https://example.com' }
                 }
               }
             }
@@ -48,13 +50,15 @@ export default function handler(req, res) {
                       url: { type: 'string' },
                       text: { type: 'string' },
                       length: { type: 'number' },
-                      scraped_at: { type: 'string' }
+                      scraped_at: { type: 'string', format: 'date-time' }
                     }
                   }
                 }
               }
             },
-            '402': { description: 'Payment Required' }
+            '402': { description: 'Payment Required' },
+            '400': { description: 'Missing url parameter' },
+            '500': { description: 'Scrape failed' }
           }
         }
       }
