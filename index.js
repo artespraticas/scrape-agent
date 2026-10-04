@@ -10,7 +10,7 @@ const server = new x402ResourceServer([
   new HTTPFacilitatorClient({ url: "https://facilitator.x402.org" }),
   new BatchFacilitatorClient({
     facilitatorUrl: "https://gateway-api.circle.com",
-    sellerAddress: process.env.SELLER_WALLET_ADDRESS,
+    sellerAddress: process.env.WALLET_ADDRESS,
   }),
 ]);
 server.register("eip155:*", new GatewayEvmScheme());
@@ -19,9 +19,9 @@ await server.initialize();
 const paymentMiddleware = server.middleware({
   "POST /api/scrape/x402": {
     accepts: [
-      { scheme: "exact", price: "$0.01", network: "eip155:8453", payTo: process.env.SELLER_WALLET_ADDRESS },
-      { scheme: "exact", price: "$0.01", network: "eip155:5042", payTo: process.env.SELLER_WALLET_ADDRESS },
-      { scheme: "exact", price: "$0.01", network: "eip155:137", payTo: process.env.SELLER_WALLET_ADDRESS }
+      { scheme: "exact", price: "$0.01", network: "eip155:8453", payTo: process.env.WALLET_ADDRESS },
+      { scheme: "exact", price: "$0.01", network: "eip155:5042", payTo: process.env.WALLET_ADDRESS },
+      { scheme: "exact", price: "$0.01", network: "eip155:137", payTo: process.env.WALLET_ADDRESS }
     ],
     description: "Pay-per-use web scraping. Extract text, links, HTML or metadata from any public URL. No API key or account needed.",
     mimeType: "application/json",
