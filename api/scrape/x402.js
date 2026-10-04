@@ -9,7 +9,7 @@ const accepts = [
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const payment = req.headers["x-payment"];
-  if (!payment) return res.status(402).json({ x402Version: 2, error: "Payment required", resource: { url: "https://scrapeagent.xyz/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
+  if (!payment) return res.status(402).json({ x402Version: 2, error: "Payment required", resource: { url: "https://api.scrapeagent.xyz/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
   const body = req.method === "POST" ? req.body : null;
   const url = (body && body.url) || req.query.url;
   if (!url) return res.status(400).json({ error: "Missing url" });
@@ -19,4 +19,3 @@ export default async function handler(req, res) {
     const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<style[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,10000);
     return res.status(200).json({ url, text, length: text.length, scraped_at: new Date().toISOString() });
   } catch(err) { return res.status(500).json({ error: "Scrape failed", detail: err.message }); }
-}
