@@ -1,4 +1,7 @@
 {
+  "rewrites": [
+    { "source": "/openapi.json", "destination": "/api/openapi.json" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
