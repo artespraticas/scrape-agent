@@ -6,6 +6,7 @@
     "build": "echo 'No build needed'"
   },
   "dependencies": {
+    "@coinbase/x402": "^2.1.0",
     "@x402/extensions": "^2.14.0"
   }
 }
