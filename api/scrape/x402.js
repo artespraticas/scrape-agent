@@ -11,10 +11,10 @@ export default async function handler(req, res) {
   const payment = req.headers["x-payment"];
   const host = req.headers.host || "api.scrapeagent.xyz";
   if (!payment) {
-    const body = { x402Version: 1, error: "Payment required", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts };
-    const v2header = Buffer.from(JSON.stringify({ x402Version: 2, accepts })).toString("base64");
+    const v2payload = { x402Version: 2, accepts };
+    const v2header = Buffer.from(JSON.stringify(v2payload)).toString("base64");
     res.setHeader("payment-required", v2header);
-    return res.status(402).json(body);
+    return res.status(402).json({ x402Version: 1, error: "Payment required", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
   }
   const reqBody = req.method === "POST" ? req.body : null;
   const url = (reqBody && reqBody.url) || req.query.url;
