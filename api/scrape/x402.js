@@ -7,7 +7,10 @@ const outputSchema = { type: "object", required: ["url","text","length","scraped
 
 const facilitatorClient = new HTTPFacilitatorClient({ url: "https://facilitator.x402.org" });
 const server = new x402ResourceServer([facilitatorClient]);
-server.register(new ExactEvmScheme());
+const scheme = new ExactEvmScheme();
+server.register("eip155:8453", scheme);
+server.register("eip155:5042", scheme);
+server.register("eip155:137", scheme);
 
 const accepts = [
   { scheme: "exact", network: "eip155:8453", maxAmountRequired: "10000", amount: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USDC", version: "2" }, outputSchema: { input: inputSchema, output: outputSchema } },
@@ -19,30 +22,27 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const host = req.headers.host || "api.scrapeagent.xyz";
   const resource = { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
-
   const paymentHeader = req.headers["x-payment"] || req.headers["payment-signature"];
   if (!paymentHeader) {
     const v2payload = { x402Version: 2, accepts };
     res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
     return res.status(402).json({ x402Version: 1, error: "Payment required", resource, accepts });
   }
-
   try {
     const payment = JSON.parse(paymentHeader);
     const verifyResult = await server.verifyPayment(payment, accepts);
     if (!verifyResult.valid) {
       const v2payload = { x402Version: 2, accepts };
       res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-      return res.status(402).json({ x402Version: 1, error: "Invalid payment: " + verifyResult.invalidReason, resource, accepts });
+      return res.status(402).json({ x402Version: 1, error: "Invalid payment", resource, accepts });
     }
     await server.settlePayment(payment, accepts);
   } catch(e) {
     console.error("Payment error:", e.message);
     const v2payload = { x402Version: 2, accepts };
     res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-    return res.status(402).json({ x402Version: 1, error: "Payment verification failed", resource, accepts });
+    return res.status(402).json({ x402Version: 1, error: "Payment failed: " + e.message, resource, accepts });
   }
-
   const reqBody = req.method === "POST" ? req.body : null;
   const url = (reqBody && reqBody.url) || req.query.url;
   if (!url) return res.status(400).json({ error: "Missing url" });
