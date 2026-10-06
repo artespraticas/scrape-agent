@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     return res.status(402).json({ x402Version: 1, error: "Payment required", resource, accepts });
   }
   try {
-    const payment = JSON.parse(paymentHeader);
+    const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
     const verifyResult = await server.verifyPayment(payment, accepts);
     if (!verifyResult.valid) {
       const v2payload = { x402Version: 2, accepts };
