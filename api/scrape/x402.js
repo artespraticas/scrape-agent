@@ -8,13 +8,12 @@ const accepts = [
 ];
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  const allHeaders = JSON.stringify(req.headers);
   const host = req.headers.host || "api.scrapeagent.xyz";
   const payment = Object.keys(req.headers).find(k => k.toLowerCase().includes("payment") || k.toLowerCase().includes("x-pay"));
   if (!payment) {
     const v2payload = { x402Version: 2, accepts };
     res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-    return res.status(402).json({ x402Version: 1, error: "Payment required", debug_headers: Object.keys(req.headers), resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
+    return res.status(402).json({ x402Version: 1, error: "Payment required", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
   }
   const reqBody = req.method === "POST" ? req.body : null;
   const url = (reqBody && reqBody.url) || req.query.url;
