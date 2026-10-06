@@ -11,15 +11,19 @@ const accepts = [
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const host = req.headers.host || "api.scrapeagent.xyz";
-  const paymentHeader = req.headers["x-payment"];
+  const paymentHeader = req.headers["x-payment"] || req.headers["payment-signature"];
   if (!paymentHeader) {
+    const v2payload = { x402Version: 2, accepts };
+    res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
     return res.status(402).json({ x402Version: 1, error: "Payment required", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
   }
   try {
     const payment = JSON.parse(paymentHeader);
     const verifyResult = await facilitator.verify(payment, { accepts });
     if (!verifyResult.valid) {
-      return res.status(402).json({ x402Version: 1, error: "Invalid payment: " + verifyResult.invalidReason, resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
+      const v2payload = { x402Version: 2, accepts };
+      res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
+      return res.status(402).json({ x402Version: 1, error: "Invalid payment", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
     }
     await facilitator.settle(payment, { accepts });
   } catch(e) {
