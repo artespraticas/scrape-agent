@@ -1,3 +1,5 @@
+import { facilitator } from "@coinbase/x402";
+
 const WALLET = process.env.WALLET_ADDRESS;
 const inputSchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" } } };
 const outputSchema = { type: "object", required: ["url","text","length","scraped_at"], properties: { url: { type: "string" }, text: { type: "string" }, length: { type: "number" }, scraped_at: { type: "string" } } };
@@ -9,11 +11,23 @@ const accepts = [
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const host = req.headers.host || "api.scrapeagent.xyz";
-  const payment = Object.keys(req.headers).find(k => k.toLowerCase().includes("payment") || k.toLowerCase().includes("x-pay"));
-  if (!payment) {
+  const paymentHeader = req.headers["x-payment"];
+  if (!paymentHeader) {
     const v2payload = { x402Version: 2, accepts };
     res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
     return res.status(402).json({ x402Version: 1, error: "Payment required", resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
+  }
+  try {
+    const payment = JSON.parse(paymentHeader);
+    const verifyResult = await facilitator.verify(payment, { accepts });
+    if (!verifyResult.valid) {
+      const v2payload = { x402Version: 2, accepts };
+      res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
+      return res.status(402).json({ x402Version: 1, error: "Invalid payment: " + verifyResult.invalidReason, resource: { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" }, accepts });
+    }
+    await facilitator.settle(payment, { accepts });
+  } catch(e) {
+    console.error("Payment verification error:", e.message);
   }
   const reqBody = req.method === "POST" ? req.body : null;
   const url = (reqBody && reqBody.url) || req.query.url;
