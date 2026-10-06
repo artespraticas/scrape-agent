@@ -30,6 +30,7 @@ export default async function handler(req, res) {
   }
   try {
     const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
+    console.error("PAYMENT DECODED:", JSON.stringify(payment).slice(0,500));
     const verifyResult = await server.verifyPayment(payment, accepts);
     if (!verifyResult.valid) {
       const v2payload = { x402Version: 2, accepts };
