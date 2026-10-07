@@ -11,10 +11,10 @@ async function verifyAndSettle(paymentHeader) {
   try {
     const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
     const network = payment.network || (payment.payload && payment.payload.authorization && "eip155:8453");
-    const facilitatorUrl = "https://facilitator.x402.org";
+    const facilitatorUrl = "https://api.cdp.coinbase.com/platform/v2/x402";
     const verifyRes = await fetch(facilitatorUrl + "/verify", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + process.env.CDP_API_KEY_SECRET },
       body: JSON.stringify({ payment, paymentRequirements: accepts })
     });
     const verifyData = await verifyRes.json();
