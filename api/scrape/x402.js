@@ -1,4 +1,10 @@
+import { createCdpAuthHeaders } from "@coinbase/x402";
+
 const WALLET = process.env.WALLET_ADDRESS;
+const CDP_KEY_ID = process.env.CDP_API_KEY_ID;
+const CDP_KEY_SECRET = process.env.CDP_API_KEY_SECRET;
+const FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402";
+
 const inputSchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" } } };
 const outputSchema = { type: "object", required: ["url","text","length","scraped_at"], properties: { url: { type: "string" }, text: { type: "string" }, length: { type: "number" }, scraped_at: { type: "string" } } };
 const accepts = [
@@ -10,18 +16,17 @@ const accepts = [
 async function verifyAndSettle(paymentHeader) {
   try {
     const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
-    const network = payment.network || (payment.payload && payment.payload.authorization && "eip155:8453");
-    const facilitatorUrl = "https://api.cdp.coinbase.com/platform/v2/x402";
-    const verifyRes = await fetch(facilitatorUrl + "/verify", {
+    const authHeaders = await createCdpAuthHeaders({ keyId: CDP_KEY_ID, keySecret: CDP_KEY_SECRET });
+    const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + process.env.CDP_API_KEY_SECRET },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ payment, paymentRequirements: accepts })
     });
     const verifyData = await verifyRes.json();
-    if (!verifyData.isValid) return { valid: false, reason: verifyData.invalidReason };
-    const settleRes = await fetch(facilitatorUrl + "/settle", {
+    if (!verifyData.isValid) return { valid: false, reason: verifyData.invalidReason || JSON.stringify(verifyData) };
+    const settleRes = await fetch(FACILITATOR_URL + "/settle", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ payment, paymentRequirements: accepts })
     });
     const settleData = await settleRes.json();
