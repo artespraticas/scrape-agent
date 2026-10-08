@@ -20,14 +20,14 @@ async function verifyAndSettle(paymentHeader) {
     const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders.verify },
-      body: JSON.stringify({ payment, paymentRequirements: accepts })
+      body: JSON.stringify({ x402Version: 2, paymentPayload: payment, paymentRequirements: accepts[0] })
     });
     const verifyData = await verifyRes.json();
     if (!verifyData.isValid) return { valid: false, reason: verifyData.invalidReason || JSON.stringify(verifyData) };
     const settleRes = await fetch(FACILITATOR_URL + "/settle", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders.settle },
-      body: JSON.stringify({ payment, paymentRequirements: accepts })
+      body: JSON.stringify({ x402Version: 2, paymentPayload: payment, paymentRequirements: accepts[0] })
     });
     const settleData = await settleRes.json();
     return { valid: true, settled: settleData };
