@@ -8,9 +8,9 @@ const FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402";
 const inputSchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" } } };
 const outputSchema = { type: "object", required: ["url","text","length","scraped_at"], properties: { url: { type: "string" }, text: { type: "string" }, length: { type: "number" }, scraped_at: { type: "string" } } };
 const accepts = [
-  { scheme: "exact", network: "eip155:8453", amount: "10000", maxAmountRequired: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } },
-  { scheme: "exact", network: "eip155:5042", amount: "10000", maxAmountRequired: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } },
-  { scheme: "exact", network: "eip155:137", amount: "10000", maxAmountRequired: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }
+  { scheme: "exact", network: "eip155:8453", amount: "10000", maxAmountRequired: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } },
+  { scheme: "exact", network: "eip155:5042", amount: "10000", maxAmountRequired: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } },
+  { scheme: "exact", network: "eip155:137", amount: "10000", maxAmountRequired: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }
 ];
 
 async function verifyAndSettle(paymentHeader) {
