@@ -16,7 +16,7 @@ const accepts = [
 async function verifyAndSettle(paymentHeader) {
   try {
     const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
-    const authHeaders = await createCdpAuthHeaders({ keyId: CDP_KEY_ID, keySecret: CDP_KEY_SECRET });
+    const authHeaders = await createCdpAuthHeaders(CDP_KEY_ID, CDP_KEY_SECRET)();
     const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders },
