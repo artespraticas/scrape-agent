@@ -19,14 +19,14 @@ async function verifyAndSettle(paymentHeader) {
     const authHeaders = await createCdpAuthHeaders(CDP_KEY_ID, CDP_KEY_SECRET)();
     const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
+      headers: { "Content-Type": "application/json", ...authHeaders.verify },
       body: JSON.stringify({ payment, paymentRequirements: accepts })
     });
     const verifyData = await verifyRes.json();
     if (!verifyData.isValid) return { valid: false, reason: verifyData.invalidReason || JSON.stringify(verifyData) };
     const settleRes = await fetch(FACILITATOR_URL + "/settle", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
+      headers: { "Content-Type": "application/json", ...authHeaders.settle },
       body: JSON.stringify({ payment, paymentRequirements: accepts })
     });
     const settleData = await settleRes.json();
