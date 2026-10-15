@@ -48,15 +48,29 @@ function sameExtra(a, b) {
 
 function findAdvertisedRequirement(chosen) {
   if (!chosen || typeof chosen !== "object") return null;
-  return accepts.find(option =>
-    option.scheme === chosen.scheme &&
-    option.network === chosen.network &&
-    option.amount === chosen.amount &&
-    option.maxTimeoutSeconds === chosen.maxTimeoutSeconds &&
-    option.asset?.toLowerCase() === chosen.asset?.toLowerCase() &&
-    option.payTo?.toLowerCase() === chosen.payTo?.toLowerCase() &&
-    sameExtra(option.extra, chosen.extra)
-  ) || null;
+  const option = accepts.find(candidate =>
+    candidate.scheme === chosen.scheme &&
+    candidate.network === chosen.network &&
+    candidate.amount === chosen.amount &&
+    candidate.maxTimeoutSeconds === chosen.maxTimeoutSeconds &&
+    candidate.asset?.toLowerCase() === chosen.asset?.toLowerCase() &&
+    candidate.payTo?.toLowerCase() === chosen.payTo?.toLowerCase() &&
+    sameExtra(candidate.extra, chosen.extra)
+  );
+  if (!option) return null;
+
+  // Send only standard, server-owned PaymentRequirements fields to the facilitator.
+  // API-specific fields such as outputSchema and the legacy maxAmountRequired are
+  // useful in discovery responses but are not part of the facilitator requirement.
+  return {
+    scheme: option.scheme,
+    network: option.network,
+    asset: option.asset,
+    amount: option.amount,
+    payTo: option.payTo,
+    maxTimeoutSeconds: option.maxTimeoutSeconds,
+    extra: option.extra
+  };
 }
 
 async function verifyPayment(paymentHeader) {
