@@ -107,6 +107,13 @@ async function verifyPayment(paymentHeader) {
   }
 }
 
+export function requireSuccessfulSettlement(data) {
+  if (!data || data.success !== true || data.error) {
+    throw new Error("Payment settlement was not confirmed by the facilitator");
+  }
+  return data;
+}
+
 async function settlePayment(payment, authHeaders, paymentRequirements) {
   const settleRes = await fetch(FACILITATOR_URL + "/settle", {
     method: "POST",
@@ -120,8 +127,7 @@ async function settlePayment(payment, authHeaders, paymentRequirements) {
   });
   if (!settleRes.ok) throw new Error("Payment settlement unavailable");
   const data = await settleRes.json();
-  if (data?.success === false || data?.error) throw new Error("Payment settlement failed");
-  return data;
+  return requireSuccessfulSettlement(data);
 }
 
 /**
