@@ -71,3 +71,16 @@ test("pinned transport connects to the supplied IP without resolving the URL hos
   assert.equal(response.status, 200);
   assert.equal(await new Response(response.body).text(), "pinned connection works");
 });
+
+test("malformed payment payload is rejected without a successful scrape response", async () => {
+  const res = mockResponse();
+  await handler({
+    method: "GET",
+    query: { url: "https://example.com/" },
+    headers: { host: "preview.example", "x-payment": "not-valid-json" }
+  }, res);
+
+  assert.equal(res.statusCode, 402);
+  assert.match(res.body.error, /^Invalid payment:/);
+  assert.equal(res.body.text, undefined);
+});
