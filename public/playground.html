@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07121f">
+<title>ScrapeAgent Playground — Preview</title>
+<style>
+:root{color-scheme:dark;--bg:#07121f;--panel:#0e1d2e;--panel2:#0a1726;--line:#253b50;--text:#eff8ff;--muted:#9db2c8;--cyan:#48d8ee;--teal:#6df0c0;--red:#ff9caa;--amber:#ffd28a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 85% -10%,#12405a 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif}main{width:min(1000px,calc(100% - 32px));margin:auto;padding:28px 0 64px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:52px}.brand{display:flex;align-items:center;gap:12px;font-weight:850;letter-spacing:.01em}.mark{width:42px;height:42px;border:1px solid #276477;border-radius:13px;background:linear-gradient(145deg,#0b2b3c,#091522);display:grid;place-items:center;color:var(--cyan);font-size:25px}.brand em{font-style:normal;color:var(--cyan)}a{color:var(--cyan)}.tag{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--teal);font-weight:750}.hero{max-width:760px;margin-bottom:28px}h1{font-size:clamp(2.3rem,6vw,4rem);line-height:1.05;letter-spacing:-.045em;margin:10px 0 14px}h2{font-size:1.1rem;margin:0 0 8px}p{color:var(--muted);margin:8px 0 14px}.panel{border:1px solid var(--line);background:rgba(14,29,46,.93);border-radius:18px;padding:22px;margin-bottom:16px}.field-label{display:block;font-weight:700;margin-bottom:8px}input{width:100%;background:#06111e;color:var(--text);border:1px solid #34516a;border-radius:11px;padding:14px;font:inherit;outline:none}input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #48d8ee20}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}button{font:inherit;font-weight:750;border-radius:11px;padding:11px 15px;border:1px solid transparent;cursor:pointer;background:var(--cyan);color:#03111c}button.secondary{background:transparent;border-color:#34516a;color:var(--text)}button:disabled{opacity:.55;cursor:wait}.price-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.pill{border:1px solid #2c4b61;border-radius:999px;padding:4px 10px;color:#c2d7e7;font-size:12px}.notice{background:#0a1726;border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--muted);margin-top:14px}.notice strong{color:var(--text)}.status{padding:14px;background:#06111e;border:1px solid var(--line);border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);min-height:64px}.status.good{border-color:#286b60;color:#b5f8dd}.status.warn{border-color:#775a34;color:#ffe0a8}.status.bad{border-color:#7b3b4a;color:#ffc0c9}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #1c3043}.kv:last-child{border:0}.kv span:first-child{color:var(--muted)}.kv span:last-child{text-align:right;overflow-wrap:anywhere}.code{font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;background:#050d17;border-radius:10px;padding:12px;color:#c1d9eb}.foot{margin-top:28px;font-size:12px;color:#8298ad}.small{font-size:13px}.green{color:var(--teal)}@media(max-width:520px){.top{margin-bottom:35px}.panel{padding:17px}.actions button{width:100%}}
+</style>
+</head>
+<body><main>
+<header class="top"><div class="brand"><div class="mark" aria-hidden="true">⌘</div><div>Scrape<em>Agent</em><div class="small" style="color:var(--muted);font-weight:500">Developer playground</div></div></div><a href="/human-preview.html">Human preview ↗</a></header>
+<section class="hero"><div class="tag">Preview environment · no payment mode</div><h1>Test a URL.<br><span class="green">Inspect before you pay.</span></h1><p>Check whether a URL passes the API's server-side safety validation, then inspect the x402 payment challenge. This playground does not connect a wallet, send payment proof, sign messages, or initiate a transaction.</p></section>
+<section class="panel">
+<label class="field-label" for="targetUrl">Public page URL</label>
+<input id="targetUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" value="https://jn.pt" placeholder="https://example.com">
+<div class="price-row"><span class="pill">Advertised price: $0.01 USDC / request</span><span class="pill">Networks: Base · Arc · Polygon</span><span class="pill">No payment sent here</span></div>
+<div class="actions"><button id="inspectBtn">Validate URL & inspect challenge</button><button class="secondary" id="resetBtn" type="button">Reset</button></div>
+<div class="notice"><strong>What this does:</strong> sends a GET request to the API with your URL and reads the expected HTTP 402 response. It does not submit a payment. A 402 means the payment challenge was returned, not that a scrape succeeded.</div>
+</section>
+<div class="grid">
+<section class="panel"><h2>1 · URL and API result</h2><p class="small">A valid public URL should normally reach the payment challenge before scraping.</p><div id="resultStatus" class="status" role="status" aria-live="polite">Ready. No request has been made yet.</div><div id="resultMeta" style="margin-top:12px"></div></section>
+<section class="panel"><h2>2 · Payment terms</h2><p class="small">Terms are populated from the live challenge response when available.</p><div id="terms"><div class="kv"><span>Price</span><span>Not checked yet</span></div></div></section>
+</div>
+<section class="panel"><h2>3 · Raw challenge / response</h2><p class="small">Useful for troubleshooting. Sensitive payment proof is never sent by this page.</p><pre id="rawOutput" class="code">No response yet.</pre></section>
+<div class="foot">ScrapeAgent safety preview. The API is not production-approved until outbound URL protection and end-to-end x402 settlement are independently tested. Never enter wallet seed phrases or private keys.</div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const defaultUrl = "https://jn.pt";
+function safeUrlCheck(raw) {
+  let u;
+  try { u = new URL(raw); } catch { return "Enter a complete URL such as https://example.com."; }
+  if (!["http:","https:"].includes(u.protocol)) return "Only http:// and https:// URLs are allowed.";
+  if (u.username || u.password) return "URLs containing usernames or passwords are not allowed.";
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g,"");
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host === "metadata" || host === "metadata.google.internal") return "Local or metadata hostnames are not allowed.";
+  if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return "Private or local IP addresses are not allowed.";
+  return null;
+}
+function networkName(n) { return ({"eip155:8453":"Base","eip155:5042":"Arc","eip155:137":"Polygon"})[n] || n || "Unspecified"; }
+function renderTerms(challenge) {
+  const accepts = Array.isArray(challenge?.accepts) ? challenge.accepts : [];
+  if (!accepts.length) { $("terms").innerHTML = '<div class="kv"><span>Challenge</span><span>Not found in response</span></div>'; return; }
+  $("terms").replaceChildren();
+  const first = accepts[0];
+  const add = (k,v) => { const row=document.createElement("div"); row.className="kv"; const a=document.createElement("span"),b=document.createElement("span"); a.textContent=k;b.textContent=v;row.append(a,b);$("terms").append(row); };
+  add("Advertised price", "$0.01 USDC per request");
+  add("Networks", [...new Set(accepts.map(x=>networkName(x.network)))].join(", "));
+  add("Payment scheme", [...new Set(accepts.map(x=>x.scheme||"unknown"))].join(", "));
+  add("Timeout", first.maxTimeoutSeconds ? first.maxTimeoutSeconds+" seconds" : "Not specified");
+  add("Payment recipient", first.payTo || "Not included");
+  add("Requirement count", String(accepts.length));
+}
+function showStatus(message,kind="") { $("resultStatus").className="status"+(kind?" "+kind:""); $("resultStatus").textContent=message; }
+$("inspectBtn").addEventListener("click", async () => {
+  const raw=$("targetUrl").value.trim();
+  const localError=safeUrlCheck(raw);
+  $("resultMeta").replaceChildren();
+  $("rawOutput").textContent="Waiting for API response…";
+  if(localError){showStatus(localError,"bad");$("rawOutput").textContent=JSON.stringify({stage:"local-validation",error:localError},null,2);return;}
+  let target;
+  try { target=new URL(raw); } catch { showStatus("Invalid URL.","bad"); return; }
+  $("inspectBtn").disabled=true;
+  showStatus("Checking URL with the server and requesting payment terms…");
+  try {
+    const endpoint="/api/scrape/x402?url="+encodeURIComponent(target.href);
+    const response=await fetch(endpoint,{method:"GET",headers:{Accept:"application/json"}});
+    const bodyText=await response.text();
+    let data; try { data=JSON.parse(bodyText); } catch { data={raw:bodyText}; }
+    const header=response.headers.get("payment-required");
+    let headerPayload=null;
+    if(header){try{headerPayload=JSON.parse(atob(header));}catch{headerPayload={decodeError:"Could not decode payment-required header"};}}
+    const challenge=data && Array.isArray(data.accepts)?data:(headerPayload||data);
+    if(challenge && Array.isArray(challenge.accepts)) renderTerms(challenge);
+    else renderTerms(null);
+    $("rawOutput").textContent=JSON.stringify({httpStatus:response.status,statusText:response.statusText,expected402:response.status===402,serverResponse:data,paymentRequiredHeader:headerPayload},null,2);
+    if(response.status===402){
+      showStatus("Payment challenge received (HTTP 402). This is the expected result for an unpaid request. No scrape was performed and no payment was sent.","good");
+    } else if(response.status===400){
+      showStatus("The server rejected the URL before payment. Review the error details below.","bad");
+    } else if(response.ok){
+      showStatus("The API returned HTTP "+response.status+". No payment was submitted by this playground; inspect the response carefully.","warn");
+    } else {
+      showStatus("The API returned HTTP "+response.status+". This is not a successful scrape. See the response details below.","warn");
+    }
+    const meta=document.createElement("div");meta.className="kv";
+    const left=document.createElement("span"),right=document.createElement("span");left.textContent="HTTP status";right.textContent=response.status+" "+response.statusText;meta.append(left,right);$("resultMeta").append(meta);
+    const requested=document.createElement("div");requested.className="kv";const l=document.createElement("span"),r=document.createElement("span");l.textContent="Requested host";r.textContent=target.hostname;requested.append(l,r);$("resultMeta").append(requested);
+  } catch(error) {
+    showStatus("Could not reach the preview API. This may be a network, CORS, or deployment issue: "+(error?.message||"unknown error"),"bad");
+    $("rawOutput").textContent=JSON.stringify({error:error?.message||"unknown error",note:"No payment was sent by this page."},null,2);
+    renderTerms(null);
+  } finally { $("inspectBtn").disabled=false; }
+});
+$("resetBtn").addEventListener("click",()=>{$("targetUrl").value=defaultUrl;showStatus("Ready. No request has been made yet.");$("resultMeta").replaceChildren();$("terms").innerHTML='<div class="kv"><span>Price</span><span>Not checked yet</span></div>';$("rawOutput").textContent="No response yet.";});
+</script></body></html>
