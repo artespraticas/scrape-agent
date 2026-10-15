@@ -84,3 +84,34 @@ test("malformed payment payload is rejected without a successful scrape response
   assert.match(res.body.error, /^Invalid payment:/);
   assert.equal(res.body.text, undefined);
 });
+
+test("payment requirements modified by the client are rejected before facilitator access", async () => {
+  const challenge = mockResponse();
+  await handler({
+    method: "GET",
+    query: { url: "https://example.com/" },
+    headers: { host: "preview.example" }
+  }, challenge);
+  assert.equal(challenge.statusCode, 402);
+
+  const accepted = JSON.parse(JSON.stringify(challenge.body.accepts[0]));
+  accepted.maxTimeoutSeconds += 1;
+  const paymentPayload = {
+    x402Version: 2,
+    accepted,
+    payload: { signature: "0x", authorization: {} }
+  };
+  const res = mockResponse();
+  await handler({
+    method: "GET",
+    query: { url: "https://example.com/" },
+    headers: {
+      host: "preview.example",
+      "payment-signature": Buffer.from(JSON.stringify(paymentPayload)).toString("base64")
+    }
+  }, res);
+
+  assert.equal(res.statusCode, 402);
+  assert.match(res.body.error, /do not exactly match/);
+  assert.equal(res.body.text, undefined);
+});
