@@ -1,5 +1,9 @@
 import { createCdpAuthHeaders } from "@coinbase/x402";
-import { validatePublicHttpUrl } from "../../lib/url-safety.js";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { Readable } from "node:stream";
+import { isIP } from "node:net";
+import { resolvePublicHttpUrl } from "../../lib/url-safety.js";
 
 const WALLET = process.env.WALLET_ADDRESS;
 const CDP_KEY_ID = process.env.CDP_API_KEY_ID;
@@ -94,6 +98,48 @@ async function settlePayment(payment, authHeaders) {
   return data;
 }
 
+/**
+ * Fetches a previously validated URL while pinning DNS to the validated IP.
+ * The URL hostname remains intact for the HTTP Host header and TLS SNI/certificate
+ * validation; only the socket's DNS lookup is pinned.
+ */
+function fetchPinned(targetUrl, pinnedAddress) {
+  const requestFn = targetUrl.protocol === "https:" ? httpsRequest : httpRequest;
+  const family = isIP(pinnedAddress);
+  return new Promise((resolve, reject) => {
+    const request = requestFn(targetUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)",
+        "Accept": "text/html,text/plain,application/xhtml+xml;q=0.9,*/*;q=0.1"
+      },
+      lookup(hostname, options, callback) {
+        if (options?.all) {
+          callback(null, [{ address: pinnedAddress, family }]);
+        } else {
+          callback(null, pinnedAddress, family);
+        }
+      },
+      signal: AbortSignal.timeout(8000)
+    }, response => {
+      const status = response.statusCode || 0;
+      resolve({
+        status,
+        ok: status >= 200 && status < 300,
+        headers: {
+          get(name) {
+            const value = response.headers[name.toLowerCase()];
+            return Array.isArray(value) ? value.join(", ") : (value ?? null);
+          }
+        },
+        body: Readable.toWeb(response)
+      });
+    });
+    request.on("error", reject);
+    request.end();
+  });
+}
+
 async function readBodyLimited(response, maxBytes) {
   const reader = response.body?.getReader();
   if (!reader) return "";
@@ -158,7 +204,7 @@ export default async function handler(req, res) {
 
   let targetUrl;
   try {
-    targetUrl = await validatePublicHttpUrl(rawUrl);
+    // Keep the exact validated IP so the outbound connection cannot re-resolve DNS.\n    targetUrl = await resolvePublicHttpUrl(rawUrl);
   } catch (error) {
     return res.status(400).json({ error: error.message || "Invalid or unsafe URL." });
   }
@@ -185,15 +231,15 @@ export default async function handler(req, res) {
     });
 
     if (upstream.status >= 300 && upstream.status < 400) {
-      return res.status(422).json({ error: "Redirects are not supported for safety. Please submit the final public URL." });
+      await upstream.body?.cancel();\n      return res.status(422).json({ error: "Redirects are not supported for safety. Please submit the final public URL." });
     }
     if (!upstream.ok) {
-      return res.status(422).json({ error: "The target page returned HTTP " + upstream.status + ". No successful extraction was produced." });
+      await upstream.body?.cancel();\n      return res.status(422).json({ error: "The target page returned HTTP " + upstream.status + ". No successful extraction was produced." });
     }
 
     const contentType = upstream.headers.get("content-type") || "";
     if (!/^(text\/html|text\/plain|application\/xhtml\+xml)(\s*;|$)/i.test(contentType)) {
-      return res.status(415).json({ error: "Unsupported content type. Only HTML and plain text pages are supported." });
+      await upstream.body?.cancel();\n      return res.status(415).json({ error: "Unsupported content type. Only HTML and plain text pages are supported." });
     }
 
     const body = await readBodyLimited(upstream, MAX_RESPONSE_BYTES);
@@ -204,7 +250,7 @@ export default async function handler(req, res) {
     // return a successful paid response; clients should follow the facilitator's retry guidance.
     const settlement = await settlePayment(verification.payment, verification.authHeaders);
     return res.status(200).json({
-      url: targetUrl.href,
+      url: targetUrl.url.href,
       text,
       length: text.length,
       scraped_at: new Date().toISOString(),
