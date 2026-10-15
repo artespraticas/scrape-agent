@@ -41,6 +41,20 @@ async function verifyPayment(paymentHeader) {
     if (!payment || typeof payment !== "object" || !payment.accepted) {
       return { valid: false, reason: "Malformed payment payload" };
     }
+    // Never let the caller choose arbitrary requirements to pass to the facilitator.
+    // The selected requirement must match one of the exact terms advertised by this API.
+    const chosen = payment.accepted;
+    const matchesAdvertisedRequirement = accepts.some(option =>
+      option.scheme === chosen.scheme &&
+      option.network === chosen.network &&
+      option.amount === chosen.amount &&
+      option.maxAmountRequired === chosen.maxAmountRequired &&
+      option.asset?.toLowerCase() === chosen.asset?.toLowerCase() &&
+      option.payTo?.toLowerCase() === chosen.payTo?.toLowerCase()
+    );
+    if (!matchesAdvertisedRequirement) {
+      return { valid: false, reason: "Payment terms do not match this service's advertised price, token, network, and recipient" };
+    }
     const authHeaders = await createCdpAuthHeaders(CDP_KEY_ID, CDP_KEY_SECRET)();
     const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
