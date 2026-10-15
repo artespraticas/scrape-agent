@@ -32,7 +32,7 @@ const accepts = [
 function paymentChallenge(res, resource, error = "Payment required") {
   const v2payload = { x402Version: 2, accepts };
   res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-  return res.status(402).json({ x402Version: 1, error, resource, accepts });
+  return res.status(402).json({ x402Version: 2, error, resource, accepts });
 }
 
 async function verifyPayment(paymentHeader) {
