@@ -3,6 +3,7 @@ import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { Readable } from "node:stream";
 import { isIP } from "node:net";
+import { isDeepStrictEqual } from "node:util";
 import { resolvePublicHttpUrl } from "../../lib/url-safety.js";
 
 const WALLET = process.env.WALLET_ADDRESS;
@@ -39,38 +40,15 @@ function paymentChallenge(res, resource, error = "Payment required") {
   return res.status(402).json({ x402Version: 2, error, resource, accepts });
 }
 
-function sameExtra(a, b) {
-  const left = a && typeof a === "object" ? a : {};
-  const right = b && typeof b === "object" ? b : {};
-  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
-  return [...keys].every(key => JSON.stringify(left[key]) === JSON.stringify(right[key]));
-}
-
 function findAdvertisedRequirement(chosen) {
   if (!chosen || typeof chosen !== "object") return null;
+  // Compare the complete selected requirement with a server-owned advertised option.
+  // Normalizing through JSON removes undefined properties that are not sent on the wire.
+  const normalizedChosen = JSON.parse(JSON.stringify(chosen));
   const option = accepts.find(candidate =>
-    candidate.scheme === chosen.scheme &&
-    candidate.network === chosen.network &&
-    candidate.amount === chosen.amount &&
-    candidate.maxTimeoutSeconds === chosen.maxTimeoutSeconds &&
-    candidate.asset?.toLowerCase() === chosen.asset?.toLowerCase() &&
-    candidate.payTo?.toLowerCase() === chosen.payTo?.toLowerCase() &&
-    sameExtra(candidate.extra, chosen.extra)
+    isDeepStrictEqual(JSON.parse(JSON.stringify(candidate)), normalizedChosen)
   );
-  if (!option) return null;
-
-  // Send only standard, server-owned PaymentRequirements fields to the facilitator.
-  // API-specific fields such as outputSchema and the legacy maxAmountRequired are
-  // useful in discovery responses but are not part of the facilitator requirement.
-  return {
-    scheme: option.scheme,
-    network: option.network,
-    asset: option.asset,
-    amount: option.amount,
-    payTo: option.payTo,
-    maxTimeoutSeconds: option.maxTimeoutSeconds,
-    extra: option.extra
-  };
+  return option ? JSON.parse(JSON.stringify(option)) : null;
 }
 
 async function verifyPayment(paymentHeader) {
