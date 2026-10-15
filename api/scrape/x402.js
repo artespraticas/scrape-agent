@@ -23,6 +23,7 @@ async function verifyAndSettle(paymentHeader) {
       body: JSON.stringify({ 
         x402Version: payment.x402Version || 2,
         paymentPayload: { 
+          x402Version: payment.x402Version || 2,
           scheme: payment.accepted?.scheme || "exact",
           network: payment.accepted?.network,
           authorization: payment.payload?.authorization,
@@ -39,6 +40,7 @@ async function verifyAndSettle(paymentHeader) {
       body: JSON.stringify({ 
         x402Version: payment.x402Version || 2,
         paymentPayload: { 
+          x402Version: payment.x402Version || 2,
           scheme: payment.accepted?.scheme || "exact",
           network: payment.accepted?.network,
           authorization: payment.payload?.authorization,
