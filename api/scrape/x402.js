@@ -39,34 +39,46 @@ function paymentChallenge(res, resource, error = "Payment required") {
   return res.status(402).json({ x402Version: 2, error, resource, accepts });
 }
 
+function sameExtra(a, b) {
+  const left = a && typeof a === "object" ? a : {};
+  const right = b && typeof b === "object" ? b : {};
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  return [...keys].every(key => JSON.stringify(left[key]) === JSON.stringify(right[key]));
+}
+
+function findAdvertisedRequirement(chosen) {
+  if (!chosen || typeof chosen !== "object") return null;
+  return accepts.find(option =>
+    option.scheme === chosen.scheme &&
+    option.network === chosen.network &&
+    option.amount === chosen.amount &&
+    option.maxTimeoutSeconds === chosen.maxTimeoutSeconds &&
+    option.asset?.toLowerCase() === chosen.asset?.toLowerCase() &&
+    option.payTo?.toLowerCase() === chosen.payTo?.toLowerCase() &&
+    sameExtra(option.extra, chosen.extra)
+  ) || null;
+}
+
 async function verifyPayment(paymentHeader) {
   try {
     const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
-    if (!payment || typeof payment !== "object" || !payment.accepted) {
-      return { valid: false, reason: "Malformed payment payload" };
+    if (!payment || typeof payment !== "object" || payment.x402Version !== 2 || !payment.accepted || !payment.payload) {
+      return { valid: false, reason: "Malformed x402 v2 payment payload" };
     }
-    // Never let the caller choose arbitrary requirements to pass to the facilitator.
-    // The selected requirement must match one of the exact terms advertised by this API.
-    const chosen = payment.accepted;
-    const matchesAdvertisedRequirement = accepts.some(option =>
-      option.scheme === chosen.scheme &&
-      option.network === chosen.network &&
-      option.amount === chosen.amount &&
-      option.maxAmountRequired === chosen.maxAmountRequired &&
-      option.asset?.toLowerCase() === chosen.asset?.toLowerCase() &&
-      option.payTo?.toLowerCase() === chosen.payTo?.toLowerCase()
-    );
-    if (!matchesAdvertisedRequirement) {
-      return { valid: false, reason: "Payment terms do not match this service's advertised price, token, network, and recipient" };
+    // Resolve the client's selection back to our server-owned terms. Never forward
+    // caller-controlled requirements to the facilitator.
+    const paymentRequirements = findAdvertisedRequirement(payment.accepted);
+    if (!paymentRequirements) {
+      return { valid: false, reason: "Payment terms do not exactly match this service's advertised price, token, network, recipient, timeout, and extra fields" };
     }
     const authHeaders = await createCdpAuthHeaders(CDP_KEY_ID, CDP_KEY_SECRET)();
     const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders.verify },
       body: JSON.stringify({
-        x402Version: payment.x402Version || 2,
+        x402Version: 2,
         paymentPayload: payment,
-        paymentRequirements: payment.accepted
+        paymentRequirements
       }),
       signal: AbortSignal.timeout(5000)
     });
@@ -75,20 +87,20 @@ async function verifyPayment(paymentHeader) {
     if (!verifyData.isValid) {
       return { valid: false, reason: verifyData.invalidReason || "Payment verification failed" };
     }
-    return { valid: true, payment, authHeaders };
+    return { valid: true, payment, authHeaders, paymentRequirements };
   } catch {
     return { valid: false, reason: "Payment verification failed" };
   }
 }
 
-async function settlePayment(payment, authHeaders) {
+async function settlePayment(payment, authHeaders, paymentRequirements) {
   const settleRes = await fetch(FACILITATOR_URL + "/settle", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders.settle },
     body: JSON.stringify({
-      x402Version: payment.x402Version || 2,
+      x402Version: 2,
       paymentPayload: payment,
-      paymentRequirements: payment.accepted
+      paymentRequirements
     }),
     signal: AbortSignal.timeout(5000)
   });
@@ -247,7 +259,7 @@ export default async function handler(req, res) {
 
     // Settlement is attempted only after extraction succeeds. If settlement fails, do not
     // return a successful paid response; clients should follow the facilitator's retry guidance.
-    const settlement = await settlePayment(verification.payment, verification.authHeaders);
+    const settlement = await settlePayment(verification.payment, verification.authHeaders, verification.paymentRequirements);
     return res.status(200).json({
       url: targetUrl.url.href,
       text,
