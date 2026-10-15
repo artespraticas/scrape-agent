@@ -22,7 +22,12 @@ async function verifyAndSettle(paymentHeader) {
       headers: { "Content-Type": "application/json", ...authHeaders.verify },
       body: JSON.stringify({ 
         x402Version: payment.x402Version || 2,
-        paymentPayload: { scheme: payment.accepted?.scheme || "exact", network: payment.accepted?.network, ...payment.payload },
+        paymentPayload: { 
+          scheme: payment.accepted?.scheme || "exact",
+          network: payment.accepted?.network,
+          authorization: payment.payload?.authorization,
+          signature: payment.payload?.signature
+        },
         paymentRequirements: payment.accepted
       })
     });
@@ -33,7 +38,12 @@ async function verifyAndSettle(paymentHeader) {
       headers: { "Content-Type": "application/json", ...authHeaders.settle },
       body: JSON.stringify({ 
         x402Version: payment.x402Version || 2,
-        paymentPayload: { scheme: payment.accepted?.scheme || "exact", network: payment.accepted?.network, ...payment.payload },
+        paymentPayload: { 
+          scheme: payment.accepted?.scheme || "exact",
+          network: payment.accepted?.network,
+          authorization: payment.payload?.authorization,
+          signature: payment.payload?.signature
+        },
         paymentRequirements: payment.accepted
       })
     });
