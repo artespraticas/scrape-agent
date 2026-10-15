@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "echo 'No build needed'"
+    "build": "echo 'No build needed'",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check api/scrape/x402.js && node --check lib/url-safety.js"
   },
   "dependencies": {
     "@coinbase/x402": "^2.1.0",
