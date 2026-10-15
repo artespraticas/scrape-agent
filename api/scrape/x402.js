@@ -1,72 +1,275 @@
 import { createCdpAuthHeaders } from "@coinbase/x402";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { Readable } from "node:stream";
+import { isIP } from "node:net";
+import { isDeepStrictEqual } from "node:util";
+import { resolvePublicHttpUrl } from "../../lib/url-safety.js";
 
 const WALLET = process.env.WALLET_ADDRESS;
 const CDP_KEY_ID = process.env.CDP_API_KEY_ID;
 const CDP_KEY_SECRET = process.env.CDP_API_KEY_SECRET;
 const FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402";
+const MAX_RESPONSE_BYTES = 1_000_000;
+const MAX_TEXT_CHARS = 10_000;
 
-const inputSchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" } } };
-const outputSchema = { type: "object", required: ["url","text","length","scraped_at"], properties: { url: { type: "string" }, text: { type: "string" }, length: { type: "number" }, scraped_at: { type: "string" } } };
+const inputSchema = {
+  type: "object",
+  required: ["url"],
+  properties: { url: { type: "string", format: "uri", description: "Public HTTP(S) URL to scrape" } }
+};
+const outputSchema = {
+  type: "object",
+  required: ["url", "text", "length", "scraped_at"],
+  properties: {
+    url: { type: "string" },
+    text: { type: "string" },
+    length: { type: "number" },
+    scraped_at: { type: "string", format: "date-time" }
+  }
+};
 const accepts = [
   { scheme: "exact", network: "eip155:8453", amount: "10000", maxAmountRequired: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } },
   { scheme: "exact", network: "eip155:5042", amount: "10000", maxAmountRequired: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } },
   { scheme: "exact", network: "eip155:137", amount: "10000", maxAmountRequired: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }
 ];
 
-async function verifyAndSettle(paymentHeader) {
+function paymentChallenge(res, resource, error = "Payment required") {
+  const v2payload = { x402Version: 2, accepts };
+  res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
+  return res.status(402).json({ x402Version: 2, error, resource, accepts });
+}
+
+function findAdvertisedRequirement(chosen) {
+  if (!chosen || typeof chosen !== "object") return null;
+  // Compare the complete selected requirement with a server-owned advertised option.
+  // Normalizing through JSON removes undefined properties that are not sent on the wire.
+  const normalizedChosen = JSON.parse(JSON.stringify(chosen));
+  const option = accepts.find(candidate =>
+    isDeepStrictEqual(JSON.parse(JSON.stringify(candidate)), normalizedChosen)
+  );
+  return option ? JSON.parse(JSON.stringify(option)) : null;
+}
+
+async function verifyPayment(paymentHeader) {
   try {
     const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
+    if (!payment || typeof payment !== "object" || payment.x402Version !== 2 || !payment.accepted || !payment.payload) {
+      return { valid: false, reason: "Malformed x402 v2 payment payload" };
+    }
+    // Resolve the client's selection back to our server-owned terms. Never forward
+    // caller-controlled requirements to the facilitator.
+    const paymentRequirements = findAdvertisedRequirement(payment.accepted);
+    if (!paymentRequirements) {
+      return { valid: false, reason: "Payment terms do not exactly match this service's advertised price, token, network, recipient, timeout, and extra fields" };
+    }
     const authHeaders = await createCdpAuthHeaders(CDP_KEY_ID, CDP_KEY_SECRET)();
     const verifyRes = await fetch(FACILITATOR_URL + "/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders.verify },
-      body: JSON.stringify({ 
-        x402Version: payment.x402Version || 2,
+      body: JSON.stringify({
+        x402Version: 2,
         paymentPayload: payment,
-        paymentRequirements: payment.accepted
-      })
+        paymentRequirements
+      }),
+      signal: AbortSignal.timeout(5000)
     });
+    if (!verifyRes.ok) return { valid: false, reason: "Payment facilitator verification unavailable" };
     const verifyData = await verifyRes.json();
-    if (!verifyData.isValid) return { valid: false, reason: verifyData.invalidReason || JSON.stringify(verifyData) };
-    const settleRes = await fetch(FACILITATOR_URL + "/settle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders.settle },
-      body: JSON.stringify({ 
-        x402Version: payment.x402Version || 2,
-        paymentPayload: payment,
-        paymentRequirements: payment.accepted
-      })
-    });
-    const settleData = await settleRes.json();
-    return { valid: true, settled: settleData };
-  } catch(e) {
-    return { valid: false, reason: e.message };
+    if (!verifyData.isValid) {
+      return { valid: false, reason: verifyData.invalidReason || "Payment verification failed" };
+    }
+    return { valid: true, payment, authHeaders, paymentRequirements };
+  } catch {
+    return { valid: false, reason: "Payment verification failed" };
   }
+}
+
+export function requireSuccessfulSettlement(data) {
+  if (!data || data.success !== true || data.error) {
+    throw new Error("Payment settlement was not confirmed by the facilitator");
+  }
+  return data;
+}
+
+async function settlePayment(payment, authHeaders, paymentRequirements) {
+  const settleRes = await fetch(FACILITATOR_URL + "/settle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders.settle },
+    body: JSON.stringify({
+      x402Version: 2,
+      paymentPayload: payment,
+      paymentRequirements
+    }),
+    signal: AbortSignal.timeout(5000)
+  });
+  if (!settleRes.ok) throw new Error("Payment settlement unavailable");
+  const data = await settleRes.json();
+  return requireSuccessfulSettlement(data);
+}
+
+/**
+ * Fetches a previously validated URL while pinning DNS to the validated IP.
+ * The URL hostname remains intact for the HTTP Host header and TLS SNI/certificate
+ * validation; only the socket's DNS lookup is pinned.
+ */
+export function fetchPinned(targetUrl, pinnedAddress) {
+  const requestFn = targetUrl.protocol === "https:" ? httpsRequest : httpRequest;
+  const family = isIP(pinnedAddress);
+  return new Promise((resolve, reject) => {
+    const request = requestFn(targetUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)",
+        "Accept": "text/html,text/plain,application/xhtml+xml;q=0.9,*/*;q=0.1"
+      },
+      lookup(hostname, options, callback) {
+        if (options?.all) {
+          callback(null, [{ address: pinnedAddress, family }]);
+        } else {
+          callback(null, pinnedAddress, family);
+        }
+      },
+      signal: AbortSignal.timeout(8000)
+    }, response => {
+      const status = response.statusCode || 0;
+      resolve({
+        status,
+        ok: status >= 200 && status < 300,
+        headers: {
+          get(name) {
+            const value = response.headers[name.toLowerCase()];
+            return Array.isArray(value) ? value.join(", ") : (value ?? null);
+          }
+        },
+        body: Readable.toWeb(response)
+      });
+    });
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+async function readBodyLimited(response, maxBytes) {
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error("The page is larger than the 1 MB limit.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const combined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8", { fatal: false }).decode(combined);
+}
+
+function htmlToText(html) {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_TEXT_CHARS);
 }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  const host = req.headers.host || "api.scrapeagent.xyz";
-  const resource = { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
-  const paymentHeader = req.headers["x-payment"] || req.headers["payment-signature"];
-  if (!paymentHeader) {
-    const v2payload = { x402Version: 2, accepts };
-    res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-    return res.status(402).json({ x402Version: 1, error: "Payment required", resource, accepts });
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-PAYMENT, PAYMENT-SIGNATURE");
+  res.setHeader("Access-Control-Expose-Headers", "payment-required");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (!["POST", "GET"].includes(req.method)) {
+    res.setHeader("Allow", "POST, GET, OPTIONS");
+    return res.status(405).json({ error: "Method not allowed" });
   }
-  const result = await verifyAndSettle(paymentHeader);
-  if (!result.valid) {
-    const v2payload = { x402Version: 2, accepts };
-    res.setHeader("payment-required", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-    return res.status(402).json({ x402Version: 1, error: "Invalid payment: " + result.reason, resource, accepts });
-  }
+
   const reqBody = req.method === "POST" ? req.body : null;
-  const url = (reqBody && reqBody.url) || req.query.url;
-  if (!url) return res.status(400).json({ error: "Missing url" });
+  const rawUrl = (reqBody && reqBody.url) || req.query?.url;
+  if (!rawUrl || typeof rawUrl !== "string") {
+    return res.status(400).json({ error: "Missing url. Supply a public HTTP(S) URL." });
+  }
+
+  let targetUrl;
   try {
-    const r = await fetch(url, { headers: { "User-Agent": "ScrapeAgent/1.0" }, signal: AbortSignal.timeout(8000) });
-    const html = await r.text();
-    const text = html.replace(/<script[^>]*>[sS]*?<\/script>/gi,"").replace(/<style[^>]*>[sS]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,10000);
-    return res.status(200).json({ url, text, length: text.length, scraped_at: new Date().toISOString() });
-  } catch(err) { return res.status(500).json({ error: "Scrape failed", detail: err.message }); }
+    // Keep the exact validated IP so the outbound connection cannot re-resolve DNS.
+    targetUrl = await resolvePublicHttpUrl(rawUrl);
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Invalid or unsafe URL." });
+  }
+
+  const host = req.headers.host || "scrapeagent.xyz";
+  const resource = { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use public web text extraction", mimeType: "application/json" };
+  const paymentHeader = req.headers["x-payment"] || req.headers["payment-signature"];
+  if (!paymentHeader) return paymentChallenge(res, resource);
+
+  const verification = await verifyPayment(paymentHeader);
+  if (!verification.valid) {
+    return paymentChallenge(res, resource, "Invalid payment: " + verification.reason);
+  }
+
+  try {
+    // Redirects are deliberately rejected to prevent a redirect from bypassing URL checks.
+    // DNS is checked before fetch; DNS rebinding remains a limitation until transport-level
+    // address pinning or a controlled outbound proxy is configured.
+    const upstream = await fetchPinned(targetUrl.url, targetUrl.address);
+
+    if (upstream.status >= 300 && upstream.status < 400) {
+      await upstream.body?.cancel();
+      return res.status(422).json({ error: "Redirects are not supported for safety. Please submit the final public URL." });
+    }
+    if (!upstream.ok) {
+      await upstream.body?.cancel();
+      return res.status(422).json({ error: "The target page returned HTTP " + upstream.status + ". No successful extraction was produced." });
+    }
+
+    const contentType = upstream.headers.get("content-type") || "";
+    if (!/^(text\/html|text\/plain|application\/xhtml\+xml)(\s*;|$)/i.test(contentType)) {
+      await upstream.body?.cancel();
+      return res.status(415).json({ error: "Unsupported content type. Only HTML and plain text pages are supported." });
+    }
+
+    const body = await readBodyLimited(upstream, MAX_RESPONSE_BYTES);
+    const text = contentType.toLowerCase().startsWith("text/plain") ? body.trim().slice(0, MAX_TEXT_CHARS) : htmlToText(body);
+    if (!text) return res.status(422).json({ error: "The page did not contain extractable text." });
+
+    // Settlement is attempted only after extraction succeeds. If settlement fails, do not
+    // return a successful paid response; clients should follow the facilitator's retry guidance.
+    const settlement = await settlePayment(verification.payment, verification.authHeaders, verification.paymentRequirements);
+    return res.status(200).json({
+      url: targetUrl.url.href,
+      text,
+      length: text.length,
+      scraped_at: new Date().toISOString(),
+      payment: { settled: true, network: settlement.network || verification.payment.accepted.network }
+    });
+  } catch (error) {
+    const status = /larger than the 1 MB limit/.test(error?.message || "") ? 413 : 502;
+    return res.status(status).json({
+      error: status === 413 ? "Target response too large." : "Scrape or payment settlement failed.",
+      detail: error?.message || "Unknown error"
+    });
+  }
 }
