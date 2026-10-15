@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import handler from "../api/scrape/x402.js";
+import { createServer } from "node:http";
+import handler, { fetchPinned } from "../api/scrape/x402.js";
 
 function mockResponse() {
   return {
@@ -48,4 +49,25 @@ test("missing payment returns matching x402 v2 JSON and header challenge", async
   );
   assert.ok(header.accepts.every(option => option.amount === "10000"));
   assert.equal(res.headers["access-control-expose-headers"], "payment-required");
+});
+
+test("pinned transport connects to the supplied IP without resolving the URL hostname", async t => {
+  const server = createServer((req, res) => {
+    res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+    res.end("pinned connection works");
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(() => new Promise(resolve => server.close(resolve)));
+
+  const address = server.address();
+  const response = await fetchPinned(
+    new URL(`http://scrapeagent-test.invalid:${address.port}/`),
+    "127.0.0.1"
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(await new Response(response.body).text(), "pinned connection works");
 });
