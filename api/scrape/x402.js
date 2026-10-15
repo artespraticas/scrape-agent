@@ -143,6 +143,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-PAYMENT, PAYMENT-SIGNATURE");
+  res.setHeader("Access-Control-Expose-Headers", "payment-required");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (!["POST", "GET"].includes(req.method)) {
     res.setHeader("Allow", "POST, GET, OPTIONS");
