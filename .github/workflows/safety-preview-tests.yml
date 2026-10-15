@@ -1,0 +1,26 @@
+name: Safety preview checks
+
+on:
+  push:
+    branches:
+      - "safety-preview/url-scraping-hardening"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  node-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Run safety and API challenge tests
+        run: npm test
