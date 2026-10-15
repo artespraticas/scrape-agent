@@ -204,7 +204,8 @@ export default async function handler(req, res) {
 
   let targetUrl;
   try {
-    // Keep the exact validated IP so the outbound connection cannot re-resolve DNS.\n    targetUrl = await resolvePublicHttpUrl(rawUrl);
+    // Keep the exact validated IP so the outbound connection cannot re-resolve DNS.
+    targetUrl = await resolvePublicHttpUrl(rawUrl);
   } catch (error) {
     return res.status(400).json({ error: error.message || "Invalid or unsafe URL." });
   }
@@ -226,15 +227,18 @@ export default async function handler(req, res) {
     const upstream = await fetchPinned(targetUrl.url, targetUrl.address);
 
     if (upstream.status >= 300 && upstream.status < 400) {
-      await upstream.body?.cancel();\n      return res.status(422).json({ error: "Redirects are not supported for safety. Please submit the final public URL." });
+      await upstream.body?.cancel();
+      return res.status(422).json({ error: "Redirects are not supported for safety. Please submit the final public URL." });
     }
     if (!upstream.ok) {
-      await upstream.body?.cancel();\n      return res.status(422).json({ error: "The target page returned HTTP " + upstream.status + ". No successful extraction was produced." });
+      await upstream.body?.cancel();
+      return res.status(422).json({ error: "The target page returned HTTP " + upstream.status + ". No successful extraction was produced." });
     }
 
     const contentType = upstream.headers.get("content-type") || "";
     if (!/^(text\/html|text\/plain|application\/xhtml\+xml)(\s*;|$)/i.test(contentType)) {
-      await upstream.body?.cancel();\n      return res.status(415).json({ error: "Unsupported content type. Only HTML and plain text pages are supported." });
+      await upstream.body?.cancel();
+      return res.status(415).json({ error: "Unsupported content type. Only HTML and plain text pages are supported." });
     }
 
     const body = await readBodyLimited(upstream, MAX_RESPONSE_BYTES);
