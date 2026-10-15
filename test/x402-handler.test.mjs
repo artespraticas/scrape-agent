@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import handler, { fetchPinned } from "../api/scrape/x402.js";
+import handler, { fetchPinned, requireSuccessfulSettlement } from "../api/scrape/x402.js";
 
 function mockResponse() {
   return {
@@ -114,4 +114,14 @@ test("payment requirements modified by the client are rejected before facilitato
   assert.equal(res.statusCode, 402);
   assert.match(res.body.error, /do not exactly match/);
   assert.equal(res.body.text, undefined);
+});
+
+test("a paid success response requires explicit facilitator settlement success", () => {
+  assert.throws(() => requireSuccessfulSettlement({}), /not confirmed/);
+  assert.throws(() => requireSuccessfulSettlement({ success: false }), /not confirmed/);
+  assert.throws(() => requireSuccessfulSettlement({ success: true, error: "settlement error" }), /not confirmed/);
+  assert.deepEqual(requireSuccessfulSettlement({ success: true, transaction: "0xabc" }), {
+    success: true,
+    transaction: "0xabc"
+  });
 });
