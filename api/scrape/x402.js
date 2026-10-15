@@ -223,12 +223,7 @@ export default async function handler(req, res) {
     // Redirects are deliberately rejected to prevent a redirect from bypassing URL checks.
     // DNS is checked before fetch; DNS rebinding remains a limitation until transport-level
     // address pinning or a controlled outbound proxy is configured.
-    const upstream = await fetch(targetUrl.href, {
-      method: "GET",
-      redirect: "manual",
-      headers: { "User-Agent": "ScrapeAgent/1.0 (+https://scrapeagent.xyz)", "Accept": "text/html,text/plain,application/xhtml+xml;q=0.9,*/*;q=0.1" },
-      signal: AbortSignal.timeout(8000)
-    });
+    const upstream = await fetchPinned(targetUrl.url, targetUrl.address);
 
     if (upstream.status >= 300 && upstream.status < 400) {
       await upstream.body?.cancel();\n      return res.status(422).json({ error: "Redirects are not supported for safety. Please submit the final public URL." });
