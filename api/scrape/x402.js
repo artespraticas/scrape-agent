@@ -103,7 +103,7 @@ async function settlePayment(payment, authHeaders) {
  * The URL hostname remains intact for the HTTP Host header and TLS SNI/certificate
  * validation; only the socket's DNS lookup is pinned.
  */
-function fetchPinned(targetUrl, pinnedAddress) {
+export function fetchPinned(targetUrl, pinnedAddress) {
   const requestFn = targetUrl.protocol === "https:" ? httpsRequest : httpRequest;
   const family = isIP(pinnedAddress);
   return new Promise((resolve, reject) => {
