@@ -1,12 +1,17 @@
 {
   "rewrites": [
-    { "source": "/openapi.json", "destination": "/api/openapi.json" }
+    { "source": "/openapi.json", "destination": "/api/openapi.json" },
+    { "source": "/mcp", "destination": "/api/mcp" }
   ],
+  "functions": {
+    "api/mcp.js": { "maxDuration": 30 }
+  },
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-PAYMENT, PAYMENT-SIGNATURE, MCP-Session-Id" }
       ]
     }
   ]

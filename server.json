@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.artespraticas/scrape-agent",
+  "title": "ScrapeAgent",
+  "description": "Pay-per-use web scraping for AI agents. Extract clean text, links, or HTML from any public URL for $0.01 USDC via x402. No API key, no account, no subscription.",
+  "repository": {
+    "url": "https://github.com/artespraticas/scrape-agent",
+    "source": "github"
+  },
+  "version": "2.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://scrapeagent.xyz/mcp"
+    }
+  ]
+}
