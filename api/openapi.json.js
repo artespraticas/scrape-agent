@@ -5,12 +5,12 @@ export default function handler(req, res) {
     openapi: '3.1.0',
     info: {
       title: 'ScrapeAgent',
-      version: '2.0.0',
-      description: 'Pay-per-use web scraping API for AI agents. $0.01 USDC per call via x402 on Base, Arc, and Polygon.',
-      'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string, format?: "text"|"html"|"links" }. Pay $0.01 USDC via x402 (GatewayWalletBatched) or MPP. Supported chains: Base (eip155:8453), Arc (eip155:5042), Polygon (eip155:137). No API key needed.',
+      version: '1.0.0',
+      description: 'Pay-per-use web scraping API for AI agents. Supports x402 and MPP payment on Base, Arc, and Polygon.',
+      'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string }. Pay $0.01 USDC via x402 or MPP. No API key needed. Accepts Base (eip155:8453), Arc (eip155:5042), Polygon (eip155:137).',
       'x-payment-info': {
         price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-        protocols: [{ x402: {} }, { mpp: { method: 'POST', intent: 'pay', currency: 'USDC' } }],
+        protocols: [{ x402: {} }, { mpp: {} }],
         networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
       },
       contact: { email: 'artespraticas@gmail.com', url: 'https://scrapeagent.xyz' },
@@ -20,33 +20,25 @@ export default function handler(req, res) {
     paths: {
       '/api/scrape/x402': {
         get: {
-          operationId: 'scrapeUrlDiscover',
-          summary: 'Discover payment requirements',
-          description: 'Returns 402 with payment requirements. Agents probe this before paying.',
+          operationId: 'scrapeUrlProbe',
+          summary: 'Probe — returns 402 Payment Required with payment instructions',
           tags: ['Scraping'],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: { method: 'POST', intent: 'pay', currency: 'USDC' } }],
+            protocols: [{ x402: {} }, { mpp: {} }],
             networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
           },
           responses: {
-            '402': {
-              description: 'Payment Required',
-              headers: {
-                'WWW-Authenticate': { schema: { type: 'string' }, description: 'MPP auth scheme' },
-                'PAYMENT-REQUIRED': { schema: { type: 'string' }, description: 'Base64 x402 payment requirements' }
-              }
-            }
+            '402': { description: 'Payment Required — send payment via x402 or MPP then POST' }
           }
         },
         post: {
           operationId: 'scrapeUrl',
           summary: 'Scrape a URL and return clean text',
-          description: 'Scrapes a public URL and returns clean text, raw HTML, or extracted links. Requires $0.01 USDC payment via x402 (GatewayWalletBatched) on Base, Arc, or Polygon.',
           tags: ['Scraping'],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: { method: 'POST', intent: 'pay', currency: 'USDC' } }],
+            protocols: [{ x402: {} }, { mpp: {} }],
             networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
           },
           requestBody: {
@@ -58,7 +50,7 @@ export default function handler(req, res) {
                   required: ['url'],
                   properties: {
                     url: { type: 'string', format: 'uri', description: 'The URL to scrape' },
-                    format: { type: 'string', enum: ['text', 'html', 'links'], description: 'Output format: text (default), html (raw), links (extracted URLs)' }
+                    format: { type: 'string', enum: ['text', 'html', 'links'], description: 'Output format (default: text)' }
                   },
                   example: { url: 'https://example.com', format: 'text' }
                 }
