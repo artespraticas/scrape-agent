@@ -23,9 +23,10 @@ export default function handler(req, res) {
           operationId: 'scrapeUrlProbe',
           summary: 'Probe — returns 402 Payment Required with payment instructions',
           tags: ['Scraping'],
+          security: [],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: {} }],
+            protocols: [{ x402: {} }, { mpp: { method: '', intent: '', currency: '' } }],
             networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
           },
           responses: {
@@ -36,9 +37,10 @@ export default function handler(req, res) {
           operationId: 'scrapeUrl',
           summary: 'Scrape a URL and return clean text',
           tags: ['Scraping'],
+          security: [{ mpp: [] }],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: {} }],
+            protocols: [{ x402: {} }, { mpp: { method: '', intent: '', currency: '' } }],
             networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
           },
           requestBody: {
@@ -80,6 +82,15 @@ export default function handler(req, res) {
             '400': { description: 'Missing url parameter' },
             '500': { description: 'Scrape failed' }
           }
+        }
+      }
+    },
+    components: {
+      securitySchemes: {
+        mpp: {
+          type: 'http',
+          scheme: 'mpp',
+          description: 'MPP micropayment — $0.01 USDC via WWW-Authenticate challenge'
         }
       }
     }
