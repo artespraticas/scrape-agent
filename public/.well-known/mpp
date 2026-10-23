@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "endpoints": [
+    {
+      "url": "https://scrapeagent.xyz/api/scrape/x402",
+      "method": "POST",
+      "price": { "amount": "10000", "currency": "USDC", "decimals": 6 },
+      "networks": ["eip155:8453", "eip155:5042", "eip155:137"],
+      "description": "Scrape any public URL and return text, HTML, or links",
+      "payTo": "0x0d4897bf4222deDdf8A5b31fa7D8021C369f40D1"
+    }
+  ]
+}

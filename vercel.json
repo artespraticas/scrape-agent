@@ -2,7 +2,8 @@
   "rewrites": [
     { "source": "/openapi.json", "destination": "/api/openapi.json" },
     { "source": "/mcp", "destination": "/api/mcp.js" },
-    { "source": "/.well-known/mcp/server-card.json", "destination": "/public/.well-known/mcp/server-card.json" }
+    { "source": "/.well-known/mcp/server-card.json", "destination": "/public/.well-known/mcp/server-card.json" },
+    { "source": "/.well-known/mpp", "destination": "/public/.well-known/mpp" }
   ],
   "functions": {
     "api/mcp.js": { "maxDuration": 30 }
