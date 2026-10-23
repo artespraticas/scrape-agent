@@ -1,7 +1,8 @@
 {
   "rewrites": [
     { "source": "/openapi.json", "destination": "/api/openapi.json" },
-    { "source": "/mcp", "destination": "/api/mcp.js" }
+    { "source": "/mcp", "destination": "/api/mcp.js" },
+    { "source": "/.well-known/mcp/server-card.json", "destination": "/public/.well-known/mcp/server-card.json" }
   ],
   "functions": {
     "api/mcp.js": { "maxDuration": 30 }

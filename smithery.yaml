@@ -1,0 +1,7 @@
+startCommand:
+  type: url
+  url: https://scrapeagent.xyz/mcp
+  configSchema:
+    type: object
+    properties: {}
+  exampleConfig: {}
