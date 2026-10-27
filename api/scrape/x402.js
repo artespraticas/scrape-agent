@@ -36,6 +36,16 @@ function send402(res, host) {
   return res.status(402).json({
     x402Version: 1, error: "Payment required", resource, accepts: allAccepts,
     schema: { input: inputSchema, output: outputSchema },
+    extensions: {
+      bazaar: {
+        schema: {
+          properties: {
+            input: inputSchema,
+            output: outputSchema,
+          }
+        }
+      }
+    },
   });
 }
 
