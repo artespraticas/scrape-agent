@@ -41,7 +41,32 @@ export default function handler(req, res) {
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
             protocols: [{ x402: {} }, { mpp: { method: '', intent: '', currency: '' } }],
-            networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
+            networks: ['eip155:8453', 'eip155:5042', 'eip155:137'],
+            extensions: {
+              bazaar: {
+                schema: {
+                  properties: {
+                    input: {
+                      type: 'object', required: ['url'],
+                      properties: {
+                        url: { type: 'string', format: 'uri', description: 'The URL to scrape' },
+                        format: { type: 'string', enum: ['text', 'html', 'links'], description: 'Output format (default: text)' }
+                      }
+                    },
+                    output: {
+                      type: 'object', required: ['url', 'text', 'length', 'scraped_at'],
+                      properties: {
+                        url: { type: 'string' },
+                        text: { type: 'string' },
+                        length: { type: 'number' },
+                        format: { type: 'string' },
+                        scraped_at: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           requestBody: {
             required: true,
