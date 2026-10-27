@@ -17,12 +17,19 @@ const gatewayAccepts = [
   { scheme: "GatewayWalletBatched", network: "eip155:137",  resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, outputSchema: { input: inputSchema, output: outputSchema } }
 ];
 
+// Coerce all maxAmountRequired to strings (validator requires string, not number)
+[...accepts, ...gatewayAccepts].forEach(a => { a.maxAmountRequired = String(a.maxAmountRequired); });
+
 const allAccepts = [...accepts, ...gatewayAccepts];
 
 function send402(res, host) {
   const origin = "https://scrapeagent.xyz";
   const resource = { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
-  const v2payload = { x402Version: 2, accepts: allAccepts };
+  const v2payload = {
+    x402Version: 2,
+    accepts: allAccepts,
+    extensions: { bazaar: { schema: { properties: { input: inputSchema, output: outputSchema } } } },
+  };
   const wwwAuth = [
     `MPP realm="scrapeagent.xyz"`,
     `payment-type="x402"`,
