@@ -19,11 +19,24 @@ const gatewayAccepts = [
 const allAccepts = [...accepts, ...gatewayAccepts];
 
 function send402(res, host) {
-  const resource = { url: "https://" + host + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
+  const origin = "https://" + host;
+  const resource = { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
   const v2payload = { x402Version: 2, accepts: allAccepts };
-  res.setHeader("WWW-Authenticate", "MPP");
+  const wwwAuth = [
+    `MPP realm="${origin}"`,
+    `payment-type="x402"`,
+    `asset="USDC"`,
+    `network="eip155:8453"`,
+    `pay-to="${WALLET}"`,
+    `amount="10000"`,
+    `input-schema="${encodeURIComponent(JSON.stringify(inputSchema))}"`,
+  ].join(", ");
+  res.setHeader("WWW-Authenticate", wwwAuth);
   res.setHeader("PAYMENT-REQUIRED", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-  return res.status(402).json({ x402Version: 1, error: "Payment required", resource, accepts: allAccepts });
+  return res.status(402).json({
+    x402Version: 1, error: "Payment required", resource, accepts: allAccepts,
+    schema: { input: inputSchema, output: outputSchema },
+  });
 }
 
 async function verifyPayment(paymentHeader) {
