@@ -20,7 +20,7 @@ const allAccepts = [...accepts, ...gatewayAccepts];
 
 function send402(res, host) {
   const origin = "https://scrapeagent.xyz";
-  const resource = { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json", inputSchema, outputSchema };
+  const resource = { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
   const v2payload = { x402Version: 2, accepts: allAccepts };
   const wwwAuth = [
     `MPP realm="scrapeagent.xyz"`,
