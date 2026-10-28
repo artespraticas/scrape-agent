@@ -47,20 +47,13 @@ export default function handler(req, res) {
                 schema: {
                   properties: {
                     input: {
-                      type: 'object', required: ['url'],
                       properties: {
-                        url: { type: 'string', format: 'uri', description: 'The URL to scrape' },
-                        format: { type: 'string', enum: ['text', 'html', 'links'], description: 'Output format (default: text)' }
+                        body: { type: 'object', required: ['url'], properties: { url: { type: 'string', format: 'uri', description: 'The URL to scrape' }, format: { type: 'string', enum: ['text','html','links'], description: 'Output format (default: text)' } } }
                       }
                     },
                     output: {
-                      type: 'object', required: ['url', 'text', 'length', 'scraped_at'],
                       properties: {
-                        url: { type: 'string' },
-                        text: { type: 'string' },
-                        length: { type: 'number' },
-                        format: { type: 'string' },
-                        scraped_at: { type: 'string', format: 'date-time' }
+                        example: { type: 'object', required: ['url','text','length','scraped_at'], properties: { url: { type: 'string' }, text: { type: 'string' }, length: { type: 'number' }, format: { type: 'string' }, scraped_at: { type: 'string', format: 'date-time' } } }
                       }
                     }
                   }
