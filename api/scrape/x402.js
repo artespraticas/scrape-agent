@@ -1,7 +1,10 @@
 const WALLET = process.env.WALLET_ADDRESS;
 
-const inputSchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" }, format: { type: "string", enum: ["text","html","links"], description: "Output format" } } };
-const outputSchema = { type: "object", required: ["url","text","length","scraped_at"], properties: { url: { type: "string" }, text: { type: "string" }, length: { type: "number" }, scraped_at: { type: "string" } } };
+// Bazaar schema: input.properties.body = request body schema, output.properties.example = response schema
+const bodySchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" }, format: { type: "string", enum: ["text","html","links"], description: "Output format (default: text)" } } };
+const exampleSchema = { type: "object", required: ["url","text","length","scraped_at"], properties: { url: { type: "string" }, text: { type: "string" }, length: { type: "number" }, format: { type: "string" }, scraped_at: { type: "string", format: "date-time" } } };
+const inputSchema = { properties: { body: bodySchema } };
+const outputSchema = { properties: { example: exampleSchema } };
 
 const RESOURCE_URL = "https://scrapeagent.xyz/api/scrape/x402";
 const accepts = [
