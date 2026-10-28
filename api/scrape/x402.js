@@ -27,7 +27,8 @@ function send402(res, host) {
   const resource = { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
   const v2payload = {
     x402Version: 2,
-    accepts: allAccepts,
+    resource: { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" },
+    accepts: allAccepts.map(({ resource: _r, description: _d, ...a }) => a), // v2 accepts have no resource/description
     extensions: { bazaar: { schema: { properties: { input: inputSchema, output: outputSchema } } } },
   };
   const wwwAuth = [
