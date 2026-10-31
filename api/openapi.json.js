@@ -26,7 +26,7 @@ export default function handler(req, res) {
           security: [],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: { method: '', intent: '', currency: '' } }],
+            protocols: [{ x402: {} }, { mpp: { method: 'POST', intent: 'scrape', currency: 'USDC' } }],
             networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
           },
           responses: {
@@ -40,7 +40,7 @@ export default function handler(req, res) {
           security: [{ mpp: [] }],
           'x-payment-info': {
             price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-            protocols: [{ x402: {} }, { mpp: { method: '', intent: '', currency: '' } }],
+            protocols: [{ x402: {} }, { mpp: { method: 'POST', intent: 'scrape', currency: 'USDC' } }],
             networks: ['eip155:8453', 'eip155:5042', 'eip155:137'],
             extensions: {
               bazaar: {
@@ -123,7 +123,8 @@ export default function handler(req, res) {
         mpp: {
           type: 'http',
           scheme: 'mpp',
-          description: 'MPP micropayment — $0.01 USDC via WWW-Authenticate challenge'
+          description: 'MPP micropayment — $0.01 USDC via WWW-Authenticate challenge',
+          'x-mpp': { method: 'POST', intent: 'scrape', currency: 'USDC' }
         },
         siwe: {
           type: 'http',

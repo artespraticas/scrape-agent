@@ -20,10 +20,10 @@ Payment destination: provided in the x402 payment challenge
 
 {
   "url": "https://example.com",
-  "extract": "text | html | links | meta"
+  "format": "text | html | links"
 }
 
-extract defaults to text.
+format defaults to text.
 
 ## How agents should call it
 
@@ -37,12 +37,14 @@ extract defaults to text.
 
 {
   "url": "https://example.com",
-  "extract": "text",
-  "result": "Example Domain...",
-  "statusCode": 200
+  "text": "Example Domain...",
+  "length": 1234,
+  "format": "text",
+  "scraped_at": "2026-10-31T10:00:00.000Z"
 }
 
 ## Discovery
 
 OpenAPI: GET https://scrapeagent.xyz/openapi.json
 x402 discovery: GET https://scrapeagent.xyz/.well-known/x402
+MPP discovery: GET https://scrapeagent.xyz/.well-known/mpp
