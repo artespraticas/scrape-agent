@@ -10,7 +10,7 @@ export default function handler(req, res) {
       'x-guidance': 'Send POST /api/scrape/x402 with JSON body { url: string }. Pay $0.01 USDC via x402 or MPP. No API key needed. Accepts Base (eip155:8453), Arc (eip155:5042), Polygon (eip155:137).',
       'x-payment-info': {
         price: { mode: 'fixed', currency: 'USD', amount: '0.010000' },
-        protocols: [{ x402: {} }, { mpp: {} }],
+        protocols: [{ x402: {} }, { mpp: { method: 'POST', intent: 'scrape', currency: 'USDC' } }],
         networks: ['eip155:8453', 'eip155:5042', 'eip155:137']
       },
       contact: { email: 'artespraticas@gmail.com', url: 'https://scrapeagent.xyz' },
