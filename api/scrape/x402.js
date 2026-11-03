@@ -9,7 +9,7 @@ const outputSchema = { properties: { example: exampleSchema } };
 const RESOURCE_URL = "https://scrapeagent.xyz/api/scrape/x402";
 const accepts = [
   { scheme: "exact", network: "eip155:8453", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
-  { scheme: "exact", network: "eip155:5042", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
+  { scheme: "exact", network: "eip155:5042", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USDC", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
   { scheme: "exact", network: "eip155:137",  resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }  // arc-studio-allow-onchain-literal
 ];
 
@@ -32,7 +32,13 @@ function send402(res, host) {
     x402Version: 2,
     resource: { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" },
     accepts: allAccepts.map(({ resource: _r, description: _d, ...a }) => a), // v2 accepts have no resource/description
-    extensions: { bazaar: { schema: { properties: { input: inputSchema, output: outputSchema } } } },
+    extensions: { bazaar: {
+      info: {
+        input: { type: "http", method: "POST", bodyType: "json", body: { url: "https://example.com", format: "text" } },
+        output: { type: "json", example: { url: "https://example.com", text: "Example Domain ...", length: 171, format: "text", scraped_at: "2026-11-03T12:00:00.000Z" } },
+      },
+      schema: { properties: { input: inputSchema, output: outputSchema } },
+    } },
   };
   const wwwAuth = [
     `MPP realm="scrapeagent.xyz"`,
