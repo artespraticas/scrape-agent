@@ -1,4 +1,16 @@
+// ScrapeAgent paid endpoint. Payments are verified AND settled by Circle Gateway
+// (createGatewayMiddleware). Nothing is served for a payment that did not settle.
+import express from "express";
+import { createGatewayMiddleware } from "@circle-fin/x402-batching/server";
+
 const WALLET = process.env.WALLET_ADDRESS;
+if (!WALLET) throw new Error("WALLET_ADDRESS env var required");
+
+const gateway = createGatewayMiddleware({
+  sellerAddress: WALLET,
+  facilitatorUrl: "https://gateway-api.circle.com",
+});
+const gatewayMiddleware = gateway.require("$0.01");
 
 // Bazaar schema: input.properties.body = request body schema, output.properties.example = response schema
 const bodySchema = { type: "object", required: ["url"], properties: { url: { type: "string", format: "uri", description: "The URL to scrape" }, format: { type: "string", enum: ["text","html","links"], description: "Output format (default: text)" } } };
@@ -7,130 +19,123 @@ const inputSchema = { properties: { body: bodySchema } };
 const outputSchema = { properties: { example: exampleSchema } };
 
 const RESOURCE_URL = "https://scrapeagent.xyz/api/scrape/x402";
-const accepts = [
-  { scheme: "exact", network: "eip155:8453", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
-  { scheme: "exact", network: "eip155:5042", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USDC", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
-  { scheme: "exact", network: "eip155:137",  resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2", decimals: 6 }, outputSchema: { input: inputSchema, output: outputSchema } }  // arc-studio-allow-onchain-literal
+
+// Options the Gateway verifier accepts: Gateway EIP-712 domain (GatewayWalletBatched,
+// verifyingContract = Gateway Wallet) and a ~7 day validity window. Mirrors gateway.require().
+const GATEWAY_WALLET = "0x77777777dcc4d5a8b6e418fd04d8997ef11000ee"; // arc-studio-allow-onchain-literal
+const GATEWAY_EXTRA = { name: "GatewayWalletBatched", version: "1", verifyingContract: GATEWAY_WALLET };
+const NETWORKS = [
+  ["eip155:8453", "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"], // Base  // arc-studio-allow-onchain-literal
+  ["eip155:5042", "0x3600000000000000000000000000000000000000"], // Arc  // arc-studio-allow-onchain-literal
+  ["eip155:137",  "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"], // Polygon  // arc-studio-allow-onchain-literal
 ];
+const accepts = NETWORKS.map(([network, asset]) => ({
+  scheme: "exact", network, asset, amount: "10000", payTo: WALLET, maxTimeoutSeconds: 604900, extra: GATEWAY_EXTRA,
+}));
+// x402 v1 body shape (kept for validators that read the JSON body)
+const v1Accepts = accepts.map((a) => ({
+  ...a, resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: a.amount,
+  outputSchema: { input: inputSchema, output: outputSchema },
+}));
 
-// Also declare GatewayWalletBatched variants for Circle Gateway agents
-const gatewayAccepts = [
-  { scheme: "GatewayWalletBatched", network: "eip155:8453", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "GatewayWalletBatched", version: "1" }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
-  { scheme: "GatewayWalletBatched", network: "eip155:5042", resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3600000000000000000000000000000000000000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "GatewayWalletBatched", version: "1" }, outputSchema: { input: inputSchema, output: outputSchema } }, // arc-studio-allow-onchain-literal
-  { scheme: "GatewayWalletBatched", network: "eip155:137",  resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: "10000", amount: "10000", asset: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "GatewayWalletBatched", version: "1" }, outputSchema: { input: inputSchema, output: outputSchema } }  // arc-studio-allow-onchain-literal
-];
+const wwwAuth = [
+  `MPP realm="scrapeagent.xyz"`,
+  `payment-type="x402"`,
+  `asset="USDC"`,
+  `network="eip155:8453"`,
+  `pay-to="${WALLET}"`,
+  `amount="10000"`,
+  `input-schema="${encodeURIComponent(JSON.stringify(inputSchema))}"`,
+].join(", ");
 
-// Coerce all maxAmountRequired to strings (validator requires string, not number)
-[...accepts, ...gatewayAccepts].forEach(a => { a.maxAmountRequired = String(a.maxAmountRequired); });
+const bazaar = {
+  info: {
+    input: { type: "http", method: "POST", bodyType: "json", body: { url: "https://example.com", format: "text" } },
+    output: { type: "json", example: { url: "https://example.com", text: "Example Domain ...", length: 171, format: "text", scraped_at: "2026-11-03T12:00:00.000Z" } },
+  },
+  schema: { properties: { input: inputSchema, output: outputSchema } },
+};
 
-const allAccepts = [...accepts, ...gatewayAccepts];
-
-function send402(res, host) {
-  const origin = "https://scrapeagent.xyz";
-  const resource = { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" };
-  const v2payload = {
-    x402Version: 2,
-    resource: { url: origin + "/api/scrape/x402", description: "Pay-per-use web scraping", mimeType: "application/json" },
-    accepts: allAccepts.map(({ resource: _r, description: _d, ...a }) => a), // v2 accepts have no resource/description
-    extensions: { bazaar: {
-      info: {
-        input: { type: "http", method: "POST", bodyType: "json", body: { url: "https://example.com", format: "text" } },
-        output: { type: "json", example: { url: "https://example.com", text: "Example Domain ...", length: 171, format: "text", scraped_at: "2026-11-03T12:00:00.000Z" } },
-      },
-      schema: { properties: { input: inputSchema, output: outputSchema } },
-    } },
-  };
-  const wwwAuth = [
-    `MPP realm="scrapeagent.xyz"`,
-    `payment-type="x402"`,
-    `asset="USDC"`,
-    `network="eip155:8453"`,
-    `pay-to="${WALLET}"`,
-    `amount="10000"`,
-    `input-schema="${encodeURIComponent(JSON.stringify(inputSchema))}"`,
-  ].join(", ");
+function send402(res) {
+  const resource = { url: RESOURCE_URL, description: "Pay-per-use web scraping", mimeType: "application/json" };
+  const v2payload = { x402Version: 2, resource, accepts, extensions: { bazaar } };
   res.setHeader("WWW-Authenticate", wwwAuth);
   res.setHeader("PAYMENT-REQUIRED", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
   return res.status(402).json({
-    x402Version: 1, error: "Payment required", resource, accepts: allAccepts,
+    x402Version: 1, error: "Payment required", resource, accepts: v1Accepts,
     schema: { input: inputSchema, output: outputSchema },
-    extensions: {
-      bazaar: {
-        schema: {
-          properties: {
-            input: inputSchema,
-            output: outputSchema,
-          }
-        }
-      }
-    },
+    extensions: { bazaar },
   });
 }
 
-async function verifyPayment(paymentHeader) {
-  try {
-    const payment = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf8"));
-    const network = payment.accepted?.network || payment.payload?.authorization?.network;
-    // Circle Gateway: forward to Circle's verification endpoint
-    const verifyRes = await fetch("https://api.circle.com/v1/w3s/payments/x402/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment, accepts: allAccepts })
-    });
-    if (verifyRes.ok) {
-      const data = await verifyRes.json();
-      if (data.isValid) return { valid: true };
-    }
-    // Fallback: accept if payment header is present and well-formed (Circle CLI agents)
-    if (payment.x402Version && payment.payload && payment.accepted) return { valid: true };
-    return { valid: false, reason: "Verification failed" };
-  } catch (e) {
-    return { valid: false, reason: e.message };
-  }
-}
+const app = express();
 
-export default async function handler(req, res) {
+app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-PAYMENT, PAYMENT-SIGNATURE, MCP-Session-Id");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, WWW-Authenticate");
   if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
 
-  const host = req.headers.host || "scrapeagent.xyz";
+// Capture the raw body before the Gateway middleware runs
+app.use((req, _res, next) => {
+  const chunks = [];
+  req.on("data", (c) => chunks.push(c));
+  req.on("end", () => {
+    const raw = Buffer.concat(chunks).toString("utf8");
+    req.rawBody = raw;
+    try { req.body = JSON.parse(raw); } catch { req.body = {}; }
+    next();
+  });
+  req.on("error", next);
+});
 
-  // GET always returns 402 so agents discover payment requirements
-  if (req.method === "GET") return send402(res, host);
+// Add the MPP challenge header to any 402 the Gateway middleware produces
+const addMppHeader = (_req, res, next) => {
+  const origWriteHead = res.writeHead.bind(res);
+  res.writeHead = function (statusCode, ...args) {
+    if (statusCode === 402) this.setHeader("WWW-Authenticate", wwwAuth);
+    return origWriteHead(statusCode, ...args);
+  };
+  next();
+};
 
-  // POST — check payment header
-  const paymentHeader = req.headers["x-payment"] || req.headers["payment-signature"];
-  if (!paymentHeader) return send402(res, host);
+// GET always returns 402 so agents can discover payment requirements
+app.get("/api/scrape/x402", (_req, res) => send402(res));
 
-  const result = await verifyPayment(paymentHeader);
-  if (!result.valid) return send402(res, host);
-
-  // Read body
-  let body = req.body;
-  if (Buffer.isBuffer(body)) {
-    try { body = JSON.parse(body.toString("utf8")); } catch { body = {}; }
-  }
-
-  const url = (body && body.url) || req.query.url;
-  if (!url) return res.status(400).json({ error: "Missing url" });
-  const format = (body && body.format) || req.query.format || "text";
-
-  try {
-    const r = await fetch(url, { headers: { "User-Agent": "ScrapeAgent/1.0" }, signal: AbortSignal.timeout(8000) });
-    const html = await r.text();
-    let result;
-    if (format === "html") {
-      result = html.slice(0, 50000);
-    } else if (format === "links") {
-      const links = [...html.matchAll(/href=["']([^"']+)["']/g)].map(m => m[1]).filter(l => l.startsWith("http")).slice(0, 200);
-      result = links.join("\n");
-    } else {
-      result = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 10000);
+app.post(
+  "/api/scrape/x402",
+  (req, res, next) => {
+    // No payment attached: return the full requirements (before any body validation)
+    if (!(req.headers["x-payment"] || req.headers["payment-signature"])) return send402(res);
+    next();
+  },
+  addMppHeader,
+  gatewayMiddleware, // verifies and settles the payment; only calls next() when it succeeded
+  async (req, res) => {
+    const body = req.body || {};
+    const url = body.url || req.query.url;
+    if (!url) return res.status(400).json({ error: "Missing url" });
+    const format = body.format || req.query.format || "text";
+    try {
+      const r = await fetch(url, { headers: { "User-Agent": "ScrapeAgent/1.0" }, signal: AbortSignal.timeout(8000) });
+      const html = await r.text();
+      let result;
+      if (format === "html") {
+        result = html.slice(0, 50000);
+      } else if (format === "links") {
+        const links = [...html.matchAll(/href=["']([^"']+)["']/g)].map((m) => m[1]).filter((l) => l.startsWith("http")).slice(0, 200);
+        result = links.join("\n");
+      } else {
+        result = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 10000);
+      }
+      return res.status(200).json({ url, text: result, length: result.length, format, scraped_at: new Date().toISOString() });
+    } catch (err) {
+      return res.status(500).json({ error: "Scrape failed", detail: err.message });
     }
-    return res.status(200).json({ url, text: result, length: result.length, format, scraped_at: new Date().toISOString() });
-  } catch (err) {
-    return res.status(500).json({ error: "Scrape failed", detail: err.message });
-  }
-}
+  },
+);
+
+export default app;
