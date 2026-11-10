@@ -2,6 +2,7 @@
 // (createGatewayMiddleware). Nothing is served for a payment that did not settle.
 import express from "express";
 import { createGatewayMiddleware } from "@circle-fin/x402-batching/server";
+import { facilitator } from "@coinbase/x402";
 
 const WALLET = process.env.WALLET_ADDRESS;
 if (!WALLET) throw new Error("WALLET_ADDRESS env var required");
@@ -29,9 +30,17 @@ const NETWORKS = [
   ["eip155:5042", "0x3600000000000000000000000000000000000000"], // Arc  // arc-studio-allow-onchain-literal
   ["eip155:137",  "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"], // Polygon  // arc-studio-allow-onchain-literal
 ];
-const accepts = NETWORKS.map(([network, asset]) => ({
+// Optional second rail: plain USDC (EIP-3009) on Base, verified and settled by the Coinbase facilitator.
+// OFF by default. Turn on by setting ENABLE_PLAIN_RAIL=true plus CDP_API_KEY_ID and CDP_API_KEY_SECRET.
+const PLAIN_RAIL = process.env.ENABLE_PLAIN_RAIL === "true" && !!process.env.CDP_API_KEY_ID && !!process.env.CDP_API_KEY_SECRET;
+const PLAIN_ACCEPTS = PLAIN_RAIL ? [{
+  scheme: "exact", network: "eip155:8453", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // arc-studio-allow-onchain-literal
+  amount: "10000", payTo: WALLET, maxTimeoutSeconds: 300, extra: { name: "USD Coin", version: "2" },
+}] : [];
+const gatewayAccepts = NETWORKS.map(([network, asset]) => ({
   scheme: "exact", network, asset, amount: "10000", payTo: WALLET, maxTimeoutSeconds: 604900, extra: GATEWAY_EXTRA,
 }));
+const accepts = [...gatewayAccepts, ...PLAIN_ACCEPTS];
 const wwwAuth = [
   `MPP realm="scrapeagent.xyz"`,
   `payment-type="x402"`,
@@ -57,6 +66,43 @@ function send402(res) {
   res.setHeader("PAYMENT-REQUIRED", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
   // Body and header are built from the same object so clients never see different options
   return res.status(402).json({ error: "Payment required", ...v2payload });
+}
+
+
+// ---- Plain USDC rail (only used when PLAIN_RAIL is on) ----
+function decodePayment(req) {
+  const h = req.headers["payment-signature"] || req.headers["x-payment"];
+  try { return JSON.parse(Buffer.from(h, "base64").toString("utf8")); } catch { return null; }
+}
+const isGatewayPayment = (p) => p?.accepted?.extra?.name === "GatewayWalletBatched";
+
+async function facilitatorCall(path, authKey, body) {
+  const auth = await facilitator.createAuthHeaders();
+  const r = await fetch(`${facilitator.url}/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(auth?.[authKey] || {}) },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20000),
+  });
+  return r.json();
+}
+
+// Verify, then settle onchain. Content is only served after settlement succeeds.
+async function settlePlain(payment, res, next) {
+  const requirements = PLAIN_ACCEPTS.find((a) => a.network === payment?.accepted?.network
+    && a.asset.toLowerCase() === String(payment?.accepted?.asset || "").toLowerCase());
+  if (!requirements) return send402(res);
+  const body = { x402Version: payment.x402Version ?? 2, paymentPayload: payment, paymentRequirements: requirements };
+  try {
+    const v = await facilitatorCall("verify", "verify", body);
+    if (!v?.isValid) return res.status(402).json({ error: "Payment verification failed", reason: v?.invalidReason || "invalid" });
+    const st = await facilitatorCall("settle", "settle", body);
+    if (!st?.success) return res.status(402).json({ error: "Payment settlement failed", reason: st?.errorReason || "settle_failed" });
+    res.setHeader("PAYMENT-RESPONSE", Buffer.from(JSON.stringify(st)).toString("base64"));
+    return next();
+  } catch (e) {
+    return res.status(502).json({ error: "Payment processing error", message: e.message });
+  }
 }
 
 const app = express();
@@ -103,8 +149,12 @@ app.post(
     if (!(req.headers["x-payment"] || req.headers["payment-signature"])) return send402(res);
     next();
   },
-  addMppHeader,
-  gatewayMiddleware, // verifies and settles the payment; only calls next() when it succeeded
+  (req, res, next) => {
+    // Plain-USDC payments (when that rail is on) go to the Coinbase facilitator; everything else to Circle Gateway
+    const payment = decodePayment(req);
+    if (PLAIN_RAIL && payment && !isGatewayPayment(payment)) return settlePlain(payment, res, next);
+    return addMppHeader(req, res, () => gatewayMiddleware(req, res, next)); // verifies and settles; next() only on success
+  },
   async (req, res) => {
     const body = req.body || {};
     const url = body.url || req.query.url;
