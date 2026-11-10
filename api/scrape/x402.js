@@ -32,12 +32,6 @@ const NETWORKS = [
 const accepts = NETWORKS.map(([network, asset]) => ({
   scheme: "exact", network, asset, amount: "10000", payTo: WALLET, maxTimeoutSeconds: 604900, extra: GATEWAY_EXTRA,
 }));
-// x402 v1 body shape (kept for validators that read the JSON body)
-const v1Accepts = accepts.map((a) => ({
-  ...a, resource: RESOURCE_URL, description: "Pay-per-use web scraping", maxAmountRequired: a.amount,
-  outputSchema: { input: inputSchema, output: outputSchema },
-}));
-
 const wwwAuth = [
   `MPP realm="scrapeagent.xyz"`,
   `payment-type="x402"`,
@@ -61,11 +55,8 @@ function send402(res) {
   const v2payload = { x402Version: 2, resource, accepts, extensions: { bazaar } };
   res.setHeader("WWW-Authenticate", wwwAuth);
   res.setHeader("PAYMENT-REQUIRED", Buffer.from(JSON.stringify(v2payload)).toString("base64"));
-  return res.status(402).json({
-    x402Version: 1, error: "Payment required", resource, accepts: v1Accepts,
-    schema: { input: inputSchema, output: outputSchema },
-    extensions: { bazaar },
-  });
+  // Body and header are built from the same object so clients never see different options
+  return res.status(402).json({ error: "Payment required", ...v2payload });
 }
 
 const app = express();
